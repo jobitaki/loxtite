@@ -3,8 +3,6 @@
 
 #include "Loxtite.h"
 #include "Scanner.h"
-#include "Token.h"
-#include "TokenType.h"
 
 Scanner::Scanner(const std::string& source) : source(source) {}
 
@@ -21,7 +19,7 @@ void Scanner::addToken(TokenType type) {
 }
 
 void Scanner::addToken(TokenType type, std::any literal) {
-    std::string text = source.substr(start, current);
+    std::string text = source.substr(start, (current - start));
     tokens.push_back(Token(type, text, literal, line));
 }
 
@@ -85,7 +83,6 @@ void Scanner::scanToken() {
             Loxtite::error(line, "Unexpected character");
             break;
     }
-    
 }
 
 std::vector<Token> Scanner::scanTokens() {

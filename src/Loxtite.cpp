@@ -1,10 +1,14 @@
+#include "Loxtite.h"
+
 #include <iostream>
 #include <fstream>
 #include <sstream>
 #include <string>
 
-#include "Loxtite.h"
 #include "Scanner.h"
+#include "Token.h"
+
+bool Loxtite::hadError = false;
 
 void Loxtite::run(const std::string& source) {
     Scanner scanner(source);

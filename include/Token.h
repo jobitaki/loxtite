@@ -14,5 +14,8 @@ private:
 
 public:
     Token(TokenType type, const std::string& lexeme, const std::any& literal, int line);
+    
+    /// @brief Creates string representation of token.
+    /// @return Returns string representation of token.
     std::string toString();
 };

@@ -1,0 +1,12 @@
+var hello = 1234.5;
+
+fun goodbye(time) {
+    return time > 100000;
+}
+
+while (hello != 10000 and !goodbye(time)) {
+    print("Hello");
+    hello = hello + 0.1;
+}
+
+/* This comment should be ignored */

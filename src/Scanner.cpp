@@ -37,6 +37,77 @@ char Scanner::peek() {
     return source.at(current);
 }
 
+char Scanner::peekNext() {
+    if (current + 1 >= source.length()) return '\0';
+    return source.at(current + 1);
+}
+
+void Scanner::string() {
+    while (peek() != '"' && !isAtEnd()) {
+        // If there is a newline
+        if (peek() == '\n') line++;
+        advance();
+    }
+
+    if (isAtEnd()) {
+        // TODO test this out
+        Loxtite::error(line, "Unterminated string.");
+        return;
+    }
+
+    // For the closing "
+    advance();
+
+    // Trim the surrounding quotes
+    std::string value = source.substr(start + 1, (current - start - 2));
+    addToken(TokenType::STRING, value);
+}
+
+bool Scanner::isDigit(char c) {
+    return c >= '0' && c <= '9';
+}
+
+void Scanner::number() {
+    while (isDigit(peek())) advance();
+
+    // Look for fractional part.
+    if (peek() == '.' && isDigit(peekNext())) {
+        // Consume the '.'
+        advance();
+
+        while (isDigit(peek())) advance();
+    }
+
+    addToken(TokenType::NUMBER, 
+             std::stod(source.substr(start, (current - start))));
+}
+
+bool Scanner::isAlpha(char c) {
+    return (c >= 'a' && c <= 'z') ||
+           (c >= 'A' && c <= 'Z') ||
+            c == '_';
+}
+
+bool Scanner::isAlphaNumeric(char c) {
+    return isAlpha(c) || isDigit(c);
+}
+
+void Scanner::identifier() {
+    while (isAlphaNumeric(peek())) advance();
+
+    std::string text = source.substr(start, (current - start));
+    auto keyword = keywords.find(text);
+    TokenType type;
+    if (keyword == keywords.end()) {
+        // If not found in identifier map.
+        type = TokenType::IDENTIFIER;
+    } else {
+        type = keyword->second;
+    }
+
+    addToken(type);
+}
+
 void Scanner::scanToken() {
     char c = advance();
 
@@ -67,6 +138,16 @@ void Scanner::scanToken() {
             if (match('/')) {
                 // If we find a second /, keep reading until EOL.
                 while (peek() != '\n' && !isAtEnd()) advance();
+            } else if (match('*')) {
+                // If we find a * keep reading until we see */
+                while ((peek() != '*' && peekNext() != '/') && !isAtEnd()) advance(); 
+                if (isAtEnd()) {
+                    Loxtite::error(line, "Unterminated comment");
+                } else {
+                    // Account for '*/'
+                    advance();
+                    advance();
+                }
             } else {
                 addToken(TokenType::SLASH);
             }
@@ -79,8 +160,15 @@ void Scanner::scanToken() {
         case '\n':
             line++;
             break;
+        case '"': string(); break;
         default: 
-            Loxtite::error(line, "Unexpected character");
+            if (isDigit(c)) {
+                number();
+            } else if (isAlpha(c)) {
+                identifier();
+            } else {
+                Loxtite::error(line, "Unexpected character");
+            }
             break;
     }
 }

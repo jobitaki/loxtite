@@ -37,3 +37,7 @@ std::string Token::toString() {
     
     return "<" + std::string(TokenTypeString[type]) + " " + lexeme + " " + literalStr + ">";
 }
+
+std::string Token::getLexeme() const {
+    return lexeme;
+}

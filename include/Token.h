@@ -18,4 +18,8 @@ public:
     /// @brief Creates string representation of token.
     /// @return Returns string representation of token.
     std::string toString();
+
+    /// @brief Getter for lexeme
+    /// @return lexeme
+    std::string getLexeme() const;
 };

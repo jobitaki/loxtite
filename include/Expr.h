@@ -1,75 +1,75 @@
+/// The purpose of Visitors is to be able to scale the number of expression-
+/// specific processing functions there are. It simply would not be scalable
+/// to keep adding new member functions to the derived classes. Instead, we
+/// have a visitor class that can be used as a base for other classes to 
+/// implement functions.
+
 #pragma once
 
 #include <memory>
 #include <any>
+#include <string>
 #include "Token.h"
 
-template<typename R> class Binary;
-template<typename R> class Grouping;
-template<typename R> class Literal;
-template<typename R> class Unary;
-template<typename R> class Visitor;
+// Forward declarations
+class Binary;
+class Grouping;
+class Literal;
+class Unary;
+class Visitor;
 
-template<typename R>
 class Visitor {
 public:
     virtual ~Visitor() = default;
-    virtual R visitBinaryExpr(Binary<R>& expr) = 0;
-    virtual R visitGroupingExpr(Grouping<R>& expr) = 0;
-    virtual R visitLiteralExpr(Literal<R>& expr) = 0;
-    virtual R visitUnaryExpr(Unary<R>& expr) = 0;
+    virtual std::any visitBinaryExpr(Binary& expr) = 0;
+    virtual std::any visitGroupingExpr(Grouping& expr) = 0;
+    virtual std::any visitLiteralExpr(Literal& expr) = 0;
+    virtual std::any visitUnaryExpr(Unary& expr) = 0;
 };
 
-template<typename R>
 class Expr {
 public:
     virtual ~Expr() = default;
-
-    virtual R accept(Visitor<R>& visitor) = 0;
+    virtual std::any accept(Visitor& visitor) = 0;
 };
 
-template<typename R>
-using ExprPtr = std::unique_ptr<Expr<R>>;
+using ExprPtr = std::unique_ptr<Expr>;
 
-template<typename R>
-class Binary : public Expr<R> {
+class Binary : public Expr {
 public:
-    Binary(ExprPtr<R> left, Token oper, ExprPtr<R> right)
+    Binary(ExprPtr left, Token oper, ExprPtr right)
         : left(std::move(left)), oper(oper), right(std::move(right)) {}
 
-    R accept(Visitor<R>& visitor) override {
+    std::any accept(Visitor& visitor) override {
         return visitor.visitBinaryExpr(*this);
     }
 
-    const ExprPtr<R> left;
+    const ExprPtr left;
     const Token oper;
-    const ExprPtr<R> right;
+    const ExprPtr right;
 };
 
-template<typename R>
-class Grouping : public Expr<R> {
+class Grouping : public Expr {
 public:
-    Grouping(ExprPtr<R> expression)
+    Grouping(ExprPtr expression)
         : expression(std::move(expression)) {}
 
-    R accept(Visitor<R>& visitor) override {
+    std::any accept(Visitor& visitor) override {
         return visitor.visitGroupingExpr(*this);
     }
 
-    const ExprPtr<R> expression;
+    const ExprPtr expression;
 };
 
-template<typename R>
-class Literal : public Expr<R> {
+class Literal : public Expr {
 public:
     Literal(std::any value)
         : value(value) {}
 
-    R accept(Visitor<R>& visitor) override {
+    std::any accept(Visitor& visitor) override {
         return visitor.visitLiteralExpr(*this);
     }
 
-    // TODO codify into script
     std::string valueToString() {
         std::string literalStr;
 
@@ -89,17 +89,16 @@ public:
     const std::any value;
 };
 
-template<typename R>
-class Unary : public Expr<R> {
+class Unary : public Expr {
 public:
-    Unary(Token oper, ExprPtr<R> right)
+    Unary(Token oper, ExprPtr right)
         : oper(oper), right(std::move(right)) {}
 
-    R accept(Visitor<R>& visitor) override {
+    std::any accept(Visitor& visitor) override {
         return visitor.visitUnaryExpr(*this);
     }
 
     const Token oper;
-    const ExprPtr<R> right;
+    const ExprPtr right;
 };
 

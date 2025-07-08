@@ -22,4 +22,12 @@ public:
     /// @brief Getter for lexeme
     /// @return lexeme
     std::string getLexeme() const;
+
+    /// @brief Getter for type
+    /// @return type
+    TokenType getType() const;
+    
+    /// @brief Getter for literal
+    /// @return literal
+    std::any getLiteral() const;
 };

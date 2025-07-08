@@ -41,3 +41,11 @@ std::string Token::toString() {
 std::string Token::getLexeme() const {
     return lexeme;
 }
+
+TokenType Token::getType() const {
+    return type;
+}
+
+std::any Token::getLiteral() const {
+    return literal;
+}

@@ -1,8 +1,7 @@
 import sys
 
 def defineType(f, baseName, className, fieldList):
-    f.write("template<typename R>\n")
-    f.write("class " + className + " : public " + baseName + "<R> {\n")
+    f.write("class " + className + " : public " + baseName + " {\n")
     f.write("public:\n")
     f.write("    " + className + "(" + fieldList + ")\n")
 
@@ -11,7 +10,7 @@ def defineType(f, baseName, className, fieldList):
     f.write("        : ")
     for i, field in enumerate(fields):
         type, name = field.split(" ")
-        if type == "ExprPtr<R>":
+        if type == "ExprPtr":
             f.write(name + "(std::move(" + name + "))")
         else:
             f.write(name + "(" + name + ")")
@@ -20,7 +19,7 @@ def defineType(f, baseName, className, fieldList):
 
     f.write(" {}\n\n")
 
-    f.write("    R accept(Visitor<R>& visitor) override {\n")
+    f.write("    std::any accept(Visitor& visitor) override {\n")
     f.write("        return visitor.visit" + className + baseName + "(*this);\n")
     f.write("    }\n\n")
 
@@ -31,14 +30,13 @@ def defineType(f, baseName, className, fieldList):
 
 
 def defineVisitors(f, baseName, types):
-    f.write("template<typename R>\n")
     f.write("class Visitor {\n")
     f.write("public:\n")
     f.write("    virtual ~Visitor() = default;\n")
     for type in types:
         typeName = type.split(";")[0].strip()
-        f.write("    virtual R visit" + typeName + baseName + "(" +
-                    typeName + "<R>& " + baseName.lower() + ") = 0;\n")
+        f.write("    virtual std::any visit" + typeName + baseName + "(" +
+                    typeName + "& " + baseName.lower() + ") = 0;\n")
     f.write("};\n\n")
 
 
@@ -51,22 +49,20 @@ def defineAst(outputDir, baseName, types):
         f.write("#include <any>\n")
         f.write('#include "Token.h"\n\n')
         
-        f.write("template<typename R> class Binary;\n")
-        f.write("template<typename R> class Grouping;\n")
-        f.write("template<typename R> class Literal;\n")
-        f.write("template<typename R> class Unary;\n")
-        f.write("template<typename R> class Visitor;\n\n")
+        f.write("class Binary;\n")
+        f.write("class Grouping;\n")
+        f.write("class Literal;\n")
+        f.write("class Unary;\n")
+        f.write("class Visitor;\n\n")
         defineVisitors(f, baseName, types)
 
-        f.write("template<typename R>\n")
         f.write("class " + baseName + " {\n")
         f.write("public:\n")
         f.write("    virtual ~Expr() = default;\n\n")
-        f.write("    virtual R accept(Visitor<R>& visitor) = 0;\n")
+        f.write("    virtual std::any accept(Visitor& visitor) = 0;\n")
         f.write("};\n\n")
 
-        f.write("template<typename R>\n")
-        f.write("using " + baseName + "Ptr = std::unique_ptr<" + baseName + "<R>>;\n\n")
+        f.write("using " + baseName + "Ptr = std::unique_ptr<" + baseName + ">;\n\n")
 
         for type in types:
             className = type.split(";")[0].strip()
@@ -83,11 +79,20 @@ def main():
 
     outputDir = args[0]
 
-    defineAst(outputDir, "Expr", [
-        "Binary   ; ExprPtr<R> left, Token oper, ExprPtr<R> right",
-        "Grouping ; ExprPtr<R> expression",
-        "Literal  ; std::any value",
-        "Unary    ; Token oper, ExprPtr<R> right"
+    # defineAst(outputDir, "Expr", [
+    #     "Binary   ; ExprPtr left, Token oper, ExprPtr right",
+    #     "Grouping ; ExprPtr expression",
+    #     "Literal  ; std::any value",
+    #     "Unary    ; Token oper, ExprPtr right"
+    # ]);
+
+    defineAst(outputDir, "Stmt", [
+        "Block ; std::vector<StmtPtr> statements",
+        "Expression ; ExprPtr expression",
+        "If ; ExprPtr condition, StmtPtr thenBranch, StmtPtr elseBranch",
+        "Print ; ExprPtr expression",
+        "Var ; Token name, ExprPtr initializer",
+        "While ; ExprPtr condition, StmtPtr body"
     ]);
 
 if __name__ == "__main__":

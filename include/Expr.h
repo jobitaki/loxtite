@@ -16,7 +16,8 @@ class Binary;
 class Grouping;
 class Literal;
 class Unary;
-class Visitor;
+class Assign;
+class Variable;
 
 class Visitor {
 public:
@@ -25,6 +26,8 @@ public:
     virtual std::any visitGroupingExpr(Grouping& expr) = 0;
     virtual std::any visitLiteralExpr(Literal& expr) = 0;
     virtual std::any visitUnaryExpr(Unary& expr) = 0;
+    virtual std::any visitAssignExpr(Assign& expr) = 0;
+    virtual std::any visitVariableExpr(Variable& expr) = 0;
 };
 
 class Expr {
@@ -101,4 +104,3 @@ public:
     const Token oper;
     const ExprPtr right;
 };
-

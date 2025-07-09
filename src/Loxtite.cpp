@@ -7,16 +7,27 @@
 
 #include "Scanner.h"
 #include "Token.h"
+#include "Parser.h"
+#include "AstPrinter.h"
 
 bool Loxtite::hadError = false;
 
 void Loxtite::run(const std::string& source) {
     Scanner scanner(source);
     std::vector<Token> tokens = scanner.scanTokens();
+    Parser parser(tokens);
+    std::unique_ptr<Expr> expr1 = parser.parse();
 
+    if (hadError) return;
+
+    std::cout << "SCANNER DUMP" << std::endl;
     for (Token& token : tokens) {
         std::cout << token.toString() << std::endl;
     }
+
+    std::cout << "AST DUMP" << std::endl;
+    AstPrinter printer;
+    std::cout << printer.print(*expr1) << std::endl;
 }
 
 void Loxtite::runFile(const std::string& path) {

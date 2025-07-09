@@ -58,7 +58,7 @@ public:
 
 class If : public Stmt {
 public:
-    If(StmtPtr condition, StmtPtr thenBranch, StmtPtr elseBranch)
+    If(ExprPtr condition, StmtPtr thenBranch, StmtPtr elseBranch)
         : condition(std::move(condition)), thenBranch(std::move(thenBranch)), 
           elseBranch(std::move(elseBranch)) {}
 
@@ -66,7 +66,7 @@ public:
         return visitor.visitIfStmt(*this);
     }
 
-    const StmtPtr condition;
+    const ExprPtr condition;
     const StmtPtr thenBranch;
     const StmtPtr elseBranch;
 };
@@ -98,14 +98,14 @@ public:
 
 class While : public Stmt {
 public:
-    While(StmtPtr condition, StmtPtr body)
+    While(ExprPtr condition, StmtPtr body)
         : condition(std::move(condition)), body(std::move(body)) {}
 
     std::any accept(Visitor& visitor) override {
         return visitor.visitWhileStmt(*this);
     }
 
-    const StmtPtr condition;
+    const ExprPtr condition;
     const StmtPtr body;
 };
 

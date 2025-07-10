@@ -16,18 +16,20 @@ void Loxtite::run(const std::string& source) {
     Scanner scanner(source);
     std::vector<Token> tokens = scanner.scanTokens();
     Parser parser(tokens);
-    std::unique_ptr<Expr> expr1 = parser.parse();
+    std::vector<std::unique_ptr<Stmt>> statements = parser.parse();
 
     if (hadError) return;
 
-    std::cout << "SCANNER DUMP" << std::endl;
-    for (Token& token : tokens) {
-        std::cout << token.toString() << std::endl;
-    }
+    // std::cout << "SCANNER DUMP" << std::endl;
+    // for (Token& token : tokens) {
+    //     std::cout << token.toString() << std::endl;
+    // }
 
     std::cout << "AST DUMP" << std::endl;
     AstPrinter printer;
-    std::cout << printer.print(*expr1) << std::endl;
+    for (StmtPtr& stmt : statements) {
+        std::cout << printer.print(*stmt) << std::endl;
+    }
 }
 
 void Loxtite::runFile(const std::string& path) {

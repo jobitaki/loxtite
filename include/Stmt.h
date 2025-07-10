@@ -5,24 +5,6 @@
 #include "Token.h"
 #include "Expr.h"
 
-class Block;
-class Expression;
-class If;
-class Print;
-class Var;
-class While;
-
-class Visitor {
-public:
-    virtual ~Visitor() = default;
-    virtual std::any visitBlockStmt(Block& stmt) = 0;
-    virtual std::any visitExpressionStmt(Expression& stmt) = 0;
-    virtual std::any visitIfStmt(If& stmt) = 0;
-    virtual std::any visitPrintStmt(Print& stmt) = 0;
-    virtual std::any visitVarStmt(Var& stmt) = 0;
-    virtual std::any visitWhileStmt(While& stmt) = 0;
-};
-
 class Stmt {
 public:
     virtual ~Stmt() = default;
@@ -35,7 +17,7 @@ using StmtPtr = std::unique_ptr<Stmt>;
 class Block : public Stmt {
 public:
     Block(std::vector<StmtPtr> statements)
-        : statements(statements) {}
+        : statements(std::move(statements)) {}
 
     std::any accept(Visitor& visitor) override {
         return visitor.visitBlockStmt(*this);
@@ -71,21 +53,21 @@ public:
     const StmtPtr elseBranch;
 };
 
-class Print : public Stmt {
-public:
-    Print(StmtPtr expression)
-        : expression(std::move(expression)) {}
+// class Print : public Stmt {
+// public:
+//     Print(ExprPtr expression)
+//         : expression(std::move(expression)) {}
 
-    std::any accept(Visitor& visitor) override {
-        return visitor.visitPrintStmt(*this);
-    }
+//     std::any accept(Visitor& visitor) override {
+//         return visitor.visitPrintStmt(*this);
+//     }
 
-    const StmtPtr expression;
-};
+//     const ExprPtr expression;
+// };
 
 class Var : public Stmt {
 public:
-    Var(Token name, StmtPtr initializer)
+    Var(Token name, ExprPtr initializer)
         : name(name), initializer(std::move(initializer)) {}
 
     std::any accept(Visitor& visitor) override {
@@ -93,7 +75,7 @@ public:
     }
 
     const Token name;
-    const StmtPtr initializer;
+    const ExprPtr initializer;
 };
 
 class While : public Stmt {

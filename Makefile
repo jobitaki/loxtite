@@ -1,5 +1,5 @@
 CXX = g++
-CXXFLAGS = -std=c++17 -Wall -Wextra -I include
+CXXFLAGS = -std=c++17 -Wall -Wextra -I include -g -O0 -gdwarf-4
 SRCDIR = src
 BUILDDIR = build
 SOURCES = $(wildcard $(SRCDIR)/*.cpp)

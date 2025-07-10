@@ -42,7 +42,7 @@ Token Parser::consume(TokenType type, std::string message) {
     // throw error(peek(), message);
 
     // TODO implement the stuff
-    std::cerr << "Parse error, unimplemented" << std::endl;
+    std::cerr << "Parse error, " << message << std::endl;
     exit(1);
 }
 
@@ -88,6 +88,7 @@ std::unique_ptr<Stmt> Parser::varStatement() {
     }
 
     consume(TokenType::SEMICOLON, "Expect semicolon.");
+    std::cout << "ADDED Var statement to tree" << std::endl;
     return std::make_unique<Var>(name, std::move(initializer));
 }
 
@@ -110,6 +111,7 @@ std::unique_ptr<Stmt> Parser::ifStatement() {
         elseBranch = statement();
     }
 
+    std::cout << "ADDED If statement to tree" << std::endl;
     return std::make_unique<If>(std::move(condition), std::move(thenBranch), 
                                 std::move(elseBranch));
 }
@@ -121,12 +123,14 @@ std::unique_ptr<Stmt> Parser::whileStatement() {
 
     auto body = statement();
 
+    std::cout << "ADDED While statement to tree" << std::endl;
     return std::make_unique<While>(std::move(condition), std::move(body));
 }
 
 std::unique_ptr<Stmt> Parser::exprStatement() {
     auto expr = expression();
     consume(TokenType::SEMICOLON, "Expect ;.");
+    std::cout << "ADDED Expr statement to tree" << std::endl;
     return std::make_unique<Expression>(std::move(expr));
 }
 
@@ -154,6 +158,10 @@ std::unique_ptr<Expr> Parser::primary() {
         std::unique_ptr<Expr> expr = expression();
         consume(TokenType::RIGHT_PAREN, "Expect ')' after expression.");
         return std::make_unique<Grouping>(std::move(expr));
+    }
+
+    if (match(TokenType::IDENTIFIER)) {
+        return std::make_unique<Variable>(previous());
     }
 
     // TODO throw error
@@ -220,6 +228,28 @@ std::unique_ptr<Expr> Parser::equality() {
     return expr;
 }
 
+std::unique_ptr<Expr> Parser::assignment() {
+    std::unique_ptr<Expr> expr = equality();
+
+    if (match(TokenType::EQUAL)) {
+        Token equals = previous(); // For error purposes
+        std::unique_ptr<Expr> value = assignment();
+
+        if (auto check = dynamic_cast<Variable*>(expr.get())) {
+            Token name = check->name;
+            return std::make_unique<Assign>(name, std::move(value));
+        }
+
+        // Error TODO
+        std::cerr << "Invalid assignment target" << std::endl;
+    }
+
+    return expr;
+}
+
+std::unique_ptr<Expr> Parser::expression() {
+    return assignment();
+}
 
 Parser::Parser(std::vector<Token> tokens) : tokens(tokens) {}
 

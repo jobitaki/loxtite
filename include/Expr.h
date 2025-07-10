@@ -19,15 +19,30 @@ class Unary;
 class Assign;
 class Variable;
 
+class Block;
+class Expression;
+class If;
+class Print;
+class Var;
+class While;
+
 class Visitor {
 public:
     virtual ~Visitor() = default;
+
+    virtual std::any visitBlockStmt(Block& stmt) = 0;
+    virtual std::any visitExpressionStmt(Expression& stmt) = 0;
+    virtual std::any visitIfStmt(If& stmt) = 0;
+    // virtual std::any visitPrintStmt(Print& stmt) = 0;
+    virtual std::any visitVarStmt(Var& stmt) = 0;
+    virtual std::any visitWhileStmt(While& stmt) = 0;
+    
     virtual std::any visitBinaryExpr(Binary& expr) = 0;
     virtual std::any visitGroupingExpr(Grouping& expr) = 0;
     virtual std::any visitLiteralExpr(Literal& expr) = 0;
     virtual std::any visitUnaryExpr(Unary& expr) = 0;
-    virtual std::any visitAssignExpr(Assign& expr) = 0;
     virtual std::any visitVariableExpr(Variable& expr) = 0;
+    virtual std::any visitAssignExpr(Assign& expr) = 0;
 };
 
 class Expr {
@@ -103,4 +118,29 @@ public:
 
     const Token oper;
     const ExprPtr right;
+};
+
+class Variable : public Expr {
+public:
+    Variable(Token name)
+        : name(name) {}
+
+    std::any accept(Visitor& visitor) override {
+        return visitor.visitVariableExpr(*this);
+    }
+
+    const Token name;
+};
+
+class Assign : public Expr {
+public:
+    Assign(Token name, ExprPtr value)
+        : name(name), value(std::move(value)) {}
+
+    std::any accept(Visitor& visitor) override {
+        return visitor.visitAssignExpr(*this);
+    }
+
+    const Token name;
+    const ExprPtr value;
 };

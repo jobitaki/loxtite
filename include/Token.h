@@ -21,13 +21,13 @@ public:
 
     /// @brief Getter for lexeme
     /// @return lexeme
-    std::string getLexeme() const;
+    std::string getLexeme() const { return lexeme; }
 
     /// @brief Getter for type
     /// @return type
-    TokenType getType() const;
+    TokenType getType() const { return type; }
     
     /// @brief Getter for literal
     /// @return literal
-    std::any getLiteral() const;
+    std::any getLiteral() const { return literal; }
 };

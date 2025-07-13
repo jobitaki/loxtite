@@ -13,8 +13,8 @@ private:
     /// @param line The line of error.
     /// @param where A description of where the error is.
     /// @param message A description of the error.
-    static void report(int line, const std::string& where, 
-                       const std::string& message);
+    static void report(int line, std::string_view where, 
+                       std::string_view message);
 
     /// @brief Runs a Loxtite script from a string. It tokenizes the source and
     ///        prints the tokens to the console for now.
@@ -32,5 +32,5 @@ public:
     /// @brief Prints error message.
     /// @param line The line at which error occurred.
     /// @param message The message to be printed.
-    static void error(int line, const std::string& message);
+    static void error(int line, std::string_view message);
 };

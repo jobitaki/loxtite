@@ -9,6 +9,7 @@
 #include "Token.h"
 #include "Parser.h"
 #include "AstPrinter.h"
+#include "AstLowering.h"
 
 bool Loxtite::hadError = false;
 
@@ -25,11 +26,28 @@ void Loxtite::run(const std::string& source) {
     //     std::cout << token.toString() << std::endl;
     // }
 
-    std::cout << "AST DUMP" << std::endl;
-    AstPrinter printer;
+    // std::cout << "AST DUMP" << std::endl;
+    // AstPrinter printer;
+    // for (StmtPtr& stmt : statements) {
+    //     std::cout << printer.print(*stmt) << std::endl;
+    // }
+
+    mlir::MLIRContext context;
+    
+    context.getOrLoadDialect<mlir::arith::ArithDialect>();
+    context.getOrLoadDialect<mlir::func::FuncDialect>();
+
+    AstLowering lowerer(&context);
+
+    lowerer.createMainFunction();
+
     for (StmtPtr& stmt : statements) {
-        std::cout << printer.print(*stmt) << std::endl;
+        stmt->accept(lowerer);
     }
+
+    auto module = lowerer.getModule();
+
+    module.print(llvm::outs());
 }
 
 void Loxtite::runFile(const std::string& path) {
@@ -66,12 +84,12 @@ void Loxtite::runPrompt() {
     }
 }
 
-void Loxtite::error(int line, const std::string& message) {
+void Loxtite::error(int line, std::string_view message) {
     report(line, "", message);
 }
 
-void Loxtite::report(int line, const std::string& where, 
-                     const std::string& message) {
+void Loxtite::report(int line, std::string_view where, 
+                     std::string_view message) {
     std::cerr << "[line " << line << "] Error: " << message << std::endl;
 }
 

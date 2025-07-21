@@ -6,14 +6,25 @@
 
 #include "Token.h"
 
+/// @brief Scanner implements lexing the source into tokens.
 class Scanner {
 private:
+    /// @brief The entire source represented as a string.
     const std::string source;
+
+    /// @brief Tokens we have collected so far.
     std::vector<Token> tokens = {};
+
+    /// @brief The character where we started our current token lexing.
     size_t start = 0;
+
+    /// @brief The current character number.
     size_t current = 0;
+
+    /// @brief Which line we are at for record-keeping.
     size_t line = 1;
 
+    /// @brief Map strings to enums.
     inline static const std::map<std::string, TokenType> keywords = {
         {"and", AND},
         {"class", CLASS},

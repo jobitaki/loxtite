@@ -4,9 +4,9 @@ var hello = 1234.5;
 //     return time > 100000;
 // }
 
-while (hello != 10000 and true) {
+while (0.0) {
     // print("Hello");
-    hello = hello + 0.1;
+    1 + 2;
 }
 
 /* This comment should be ignored */

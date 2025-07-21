@@ -12,19 +12,23 @@
 #include "Token.h"
 
 // Forward declarations
+// Expressions
 class Binary;
 class Grouping;
 class Literal;
 class Unary;
 class Assign;
 class Variable;
+class FunctionCall;
 
+// Statements
 class Block;
 class Expression;
 class If;
 class Print;
 class Var;
 class While;
+class Function;
 
 class Visitor {
 public:
@@ -143,4 +147,9 @@ public:
 
     const Token name;
     const ExprPtr value;
+};
+
+class FunctionCall : public Expr {
+public:
+    FunctionCall(Token name, std::vector<Token> arguments);
 };

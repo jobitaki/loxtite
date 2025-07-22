@@ -70,12 +70,44 @@ void Parser::synchronize() {
 
 std::unique_ptr<Stmt> Parser::declaration() {
     try {
+        if (match(TokenType::FUN)) return function("function");
         if (match(TokenType::VAR)) return varStatement();
         return statement();
     } catch (...) {
         synchronize();
         return nullptr;
     }
+}
+
+std::unique_ptr<Stmt> Parser::function(std::string_view kind) {
+    Token name = consume(TokenType::IDENTIFIER, 
+        "Expect " + std::string(kind) + " name.");
+
+    consume(TokenType::LEFT_PAREN, 
+        "Expect '(' after " + std::string(kind) + " name.");
+    std::vector<Token> parameters;
+
+    if (!check(TokenType::RIGHT_PAREN)) {
+        do {
+            if (parameters.size() >= 255) {
+                // TODO throw error
+            }
+
+            parameters.push_back(consume(TokenType::IDENTIFIER, 
+                "Expect parameter name."));
+        } while (match(TokenType::COMMA));
+    }
+
+    consume(TokenType::RIGHT_PAREN, "Expect ')' after parameters");
+
+    consume(TokenType::LEFT_BRACE, "Expect '{' after parameters.");
+
+    std::cout << "Got to here" << std::endl;
+
+    std::vector<StmtPtr> body = block();
+
+    std::cout << "ADDED function decl" << std::endl;
+    return std::make_unique<Function>(name, std::move(parameters), std::move(body));
 }
 
 std::unique_ptr<Stmt> Parser::varStatement() {
@@ -95,6 +127,8 @@ std::unique_ptr<Stmt> Parser::varStatement() {
 std::unique_ptr<Stmt> Parser::statement() {
     if (match(TokenType::IF)) return ifStatement();
     if (match(TokenType::WHILE)) return whileStatement();
+    if (match(TokenType::PRINT)) return printStatement();
+    if (match(TokenType::RETURN)) return returnStatement();
     if (match(TokenType::LEFT_BRACE)) return std::make_unique<Block>(block());
 
     return exprStatement();
@@ -125,6 +159,26 @@ std::unique_ptr<Stmt> Parser::whileStatement() {
 
     std::cout << "ADDED While statement to tree" << std::endl;
     return std::make_unique<While>(std::move(condition), std::move(body));
+}
+
+std::unique_ptr<Stmt> Parser::printStatement() {
+    Token keyword = previous();
+    consume(TokenType::LEFT_PAREN, "Expect '('.");
+    auto expr = expression();
+    consume(TokenType::RIGHT_PAREN, "Expect ')'.");
+    consume(TokenType::SEMICOLON, "Expect ';'.");
+
+    std::cout << "ADDED Print statement to tree" << std::endl;
+    return std::make_unique<Print>(keyword, std::move(expr));
+}
+
+std::unique_ptr<Stmt> Parser::returnStatement() {
+    Token keyword = previous();
+    auto expr = expression();
+    consume(TokenType::SEMICOLON, "Expect ';'.");
+
+    std::cout << "ADDED Return statement" << std::endl;
+    return std::make_unique<Return>(keyword, std::move(expr));
 }
 
 std::unique_ptr<Stmt> Parser::exprStatement() {
@@ -224,7 +278,40 @@ std::unique_ptr<Expr> Parser::unary() {
         return std::make_unique<Unary>(oper, std::move(right));
     }
 
-    return primary();
+    return call();
+}
+
+std::unique_ptr<Expr> Parser::call() {
+    // This handles catching identifiers
+    std::unique_ptr<Expr> expr = primary();
+
+    while (true) {
+        if (match(TokenType::LEFT_PAREN)) {
+            expr = finishCall(std::move(expr));
+        } else {
+            break;
+        }
+    }
+
+    return expr;
+}
+
+std::unique_ptr<Expr> Parser::finishCall(ExprPtr callee) {
+    std::vector<ExprPtr> arguments;
+
+    if (!check(TokenType::RIGHT_PAREN)) {
+        do {
+            if (arguments.size() >= 255) {
+                // TODO throw error
+            }
+            arguments.push_back(expression());
+        } while (match(TokenType::COMMA));
+    }
+
+    Token paren = consume(RIGHT_PAREN, "Expect ')' after arguments.");
+
+    std::cout << "ADDED function call to tree" << std::endl;
+    return std::make_unique<Call>(std::move(callee), paren, std::move(arguments));
 }
 
 std::unique_ptr<Expr> Parser::primary() {

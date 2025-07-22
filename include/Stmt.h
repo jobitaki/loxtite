@@ -38,6 +38,20 @@ public:
     const ExprPtr expression;
 };
 
+class Function : public Stmt {
+public:
+    Function(Token name, std::vector<Token> params, std::vector<StmtPtr> body) 
+        : name(name), params(std::move(params)), body(std::move(body)) {}
+
+    std::any accept(Visitor& visitor) override {
+        return visitor.visitFunctionStmt(*this);
+    }
+
+    const Token name;
+    const std::vector<Token> params;
+    const std::vector<StmtPtr> body;
+};
+
 class If : public Stmt {
 public:
     If(ExprPtr condition, StmtPtr thenBranch, StmtPtr elseBranch)
@@ -53,17 +67,44 @@ public:
     const StmtPtr elseBranch;
 };
 
-// class Print : public Stmt {
-// public:
-//     Print(ExprPtr expression)
-//         : expression(std::move(expression)) {}
+class While : public Stmt {
+public:
+    While(ExprPtr condition, StmtPtr body)
+        : condition(std::move(condition)), body(std::move(body)) {}
 
-//     std::any accept(Visitor& visitor) override {
-//         return visitor.visitPrintStmt(*this);
-//     }
+    std::any accept(Visitor& visitor) override {
+        return visitor.visitWhileStmt(*this);
+    }
 
-//     const ExprPtr expression;
-// };
+    const ExprPtr condition;
+    const StmtPtr body;
+};
+
+class Print : public Stmt {
+public:
+    Print(Token keyword, ExprPtr expression)
+        : keyword(keyword), expression(std::move(expression)) {}
+
+    std::any accept(Visitor& visitor) override {
+        return visitor.visitPrintStmt(*this);
+    }
+
+    const Token keyword;
+    const ExprPtr expression;
+};
+
+class Return : public Stmt {
+public:
+    Return(Token keyword, ExprPtr expression)
+        : keyword(keyword), expression(std::move(expression)) {}
+
+    std::any accept(Visitor& visitor) override {
+        return visitor.visitReturnStmt(*this);
+    }
+
+    const Token keyword;
+    const ExprPtr expression;
+};
 
 class Var : public Stmt {
 public:
@@ -78,16 +119,4 @@ public:
     const ExprPtr initializer;
 };
 
-class While : public Stmt {
-public:
-    While(ExprPtr condition, StmtPtr body)
-        : condition(std::move(condition)), body(std::move(body)) {}
-
-    std::any accept(Visitor& visitor) override {
-        return visitor.visitWhileStmt(*this);
-    }
-
-    const ExprPtr condition;
-    const StmtPtr body;
-};
 

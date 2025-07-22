@@ -19,16 +19,17 @@ class Literal;
 class Unary;
 class Assign;
 class Variable;
-class FunctionCall;
+class Call;
 
 // Statements
 class Block;
 class Expression;
-class If;
-class Print;
-class Var;
-class While;
 class Function;
+class If;
+class While;
+class Print;
+class Return;
+class Var;
 
 class Visitor {
 public:
@@ -36,15 +37,18 @@ public:
 
     virtual std::any visitBlockStmt(Block& stmt) = 0;
     virtual std::any visitExpressionStmt(Expression& stmt) = 0;
+    virtual std::any visitFunctionStmt(Function& stmt) = 0;
     virtual std::any visitIfStmt(If& stmt) = 0;
-    // virtual std::any visitPrintStmt(Print& stmt) = 0;
-    virtual std::any visitVarStmt(Var& stmt) = 0;
     virtual std::any visitWhileStmt(While& stmt) = 0;
+    virtual std::any visitPrintStmt(Print& stmt) = 0;
+    virtual std::any visitReturnStmt(Return& stmt) = 0;
+    virtual std::any visitVarStmt(Var& stmt) = 0;
     
     virtual std::any visitBinaryExpr(Binary& expr) = 0;
     virtual std::any visitGroupingExpr(Grouping& expr) = 0;
     virtual std::any visitLiteralExpr(Literal& expr) = 0;
     virtual std::any visitUnaryExpr(Unary& expr) = 0;
+    virtual std::any visitCallExpr(Call& expr) = 0;
     virtual std::any visitVariableExpr(Variable& expr) = 0;
     virtual std::any visitAssignExpr(Assign& expr) = 0;
 };
@@ -149,7 +153,16 @@ public:
     const ExprPtr value;
 };
 
-class FunctionCall : public Expr {
+class Call : public Expr {
 public:
-    FunctionCall(Token name, std::vector<Token> arguments);
+    Call(ExprPtr callee, Token paren, std::vector<ExprPtr> arguments)
+        : callee(std::move(callee)), paren(paren), arguments(std::move(arguments)) {}
+    
+    std::any accept(Visitor& visitor) override {
+        return visitor.visitCallExpr(*this);
+    }
+
+    const ExprPtr callee;
+    const Token paren;
+    const std::vector<ExprPtr> arguments;
 };

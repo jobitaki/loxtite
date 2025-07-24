@@ -1,2 +1,0 @@
-cmake .. -DLLVM_DIR=/opt/homebrew/lib/cmake/llvm -DMLIR_DIR=/opt/homebrew/lib/cmake/mlir
-make -j$(sysctl -n hw.ncpu)

@@ -12,8 +12,8 @@
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
+#include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/IR/BuiltinTypes.h"
-
 
 #include <unordered_map>
 
@@ -31,14 +31,18 @@ public:
 
     std::any visitBlockStmt(Block& stmt) override;
     std::any visitExpressionStmt(Expression& stmt) override;
+    std::any visitFunctionStmt(Function& stmt) override;
     std::any visitIfStmt(If& stmt) override;
-    std::any visitVarStmt(Var& stmt) override;
     std::any visitWhileStmt(While& stmt) override;
+    std::any visitPrintStmt(Print& stmt) override;
+    std::any visitReturnStmt(Return& stmt) override;
+    std::any visitVarStmt(Var& stmt) override;
     
     std::any visitBinaryExpr(Binary& expr) override;
     std::any visitGroupingExpr(Grouping& expr) override;
     std::any visitLiteralExpr(Literal& expr) override;
     std::any visitUnaryExpr(Unary& expr) override;
+    std::any visitCallExpr(Call& expr) override;
     std::any visitVariableExpr(Variable& expr) override;
     std::any visitAssignExpr(Assign& expr) override;
 

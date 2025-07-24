@@ -16,23 +16,32 @@ void AstLowering::createMainFunction() {
 }
 
 std::any AstLowering::visitBlockStmt(Block& stmt) {
+    // Note StmtPtr& means we are not copying the unique_ptr
+    for (const StmtPtr& statement : stmt.statements) {
+        statement->accept(*this);
+    }
+
+    std::cout << "MLIR: Added block statement to MLIR" << std::endl;
     return nullptr;
 }
 
 std::any AstLowering::visitExpressionStmt(Expression& stmt) {
-    return stmt.expression->accept(*this);
+    auto result = stmt.expression->accept(*this);
+    std::cout << "MLIR: Added expression statement to MLIR" << std::endl;
+    return result;
 }
 
-std::any AstLowering::visitIfStmt(If& stmt) {
+std::any AstLowering::visitFunctionStmt(Function& stmt) {
+    std::cout << "MLIR: Added function statement to MLIR" << std::endl;
     return nullptr;
 }
 
-std::any AstLowering::visitVarStmt(Var& stmt) {
+std::any AstLowering::visitIfStmt(If& stmt) {
+    std::cout << "MLIR: Added if statement to MLIR" << std::endl;
     return nullptr;
 }
 
 std::any AstLowering::visitWhileStmt(While& stmt) {
-    
     auto whileOp = builder.create<mlir::scf::WhileOp>(
         loc,
         mlir::TypeRange{},
@@ -94,7 +103,47 @@ std::any AstLowering::visitWhileStmt(While& stmt) {
 
     builder.setInsertionPointAfter(whileOp);
 
+    std::cout << "MLIR: Added while loop to MLIR" << std::endl;
     return mlir::Value{};
+}
+
+std::any AstLowering::visitPrintStmt(Print& stmt) {
+    std::cout << "MLIR: Added print statement to MLIR" << std::endl;
+    return nullptr;
+}
+
+std::any AstLowering::visitReturnStmt(Return& stmt) {
+    std::cout << "MLIR: Added return statement to MLIR" << std::endl;
+    return nullptr;
+}
+
+std::any AstLowering::visitVarStmt(Var& stmt) {
+    // (1) Allocate mutable memory on stack
+    auto allocaOp = builder.create<mlir::memref::AllocaOp>(
+        loc, mlir::MemRefType::get({}, builder.getF64Type())
+    );
+
+    // (2) Initialize the memory9
+    mlir::Value initValue;
+    if (stmt.initializer) {
+        // (2.1) If initializer exists, set that as initial value.
+        auto initResult = stmt.initializer->accept(*this);
+        initValue = std::any_cast<mlir::Value>(initResult);
+    } else {
+        // (2.2) If initializer does not exist, set to zero.
+        initValue = builder.create<mlir::arith::ConstantFloatOp>(
+            loc, llvm::APFloat(0.0), builder.getF64Type()
+        );
+    }
+
+    // (3) Store initial value
+    builder.create<mlir::memref::StoreOp>(loc, initValue, allocaOp);
+
+    // (4) Store the memory reference in symbol table
+    symbolTable[stmt.name.getLexeme()] = allocaOp;
+
+    std::cout << "MLIR: Added variable declaration '" << stmt.name.getLexeme() << "' to MLIR" << std::endl;
+    return allocaOp;
 }
 
 std::any AstLowering::visitBinaryExpr(Binary& expr) {
@@ -109,18 +158,22 @@ std::any AstLowering::visitBinaryExpr(Binary& expr) {
     switch (expr.oper.getType()) {
         case TokenType::PLUS:
             result = builder.create<mlir::arith::AddFOp>(loc, leftVal, rightVal);
+            std::cout << "MLIR: Added addition operation to MLIR" << std::endl;
             break;
         case TokenType::MINUS:
             result = builder.create<mlir::arith::SubFOp>(loc, leftVal, rightVal);
+            std::cout << "MLIR: Added subtraction operation to MLIR" << std::endl;
             break;
         case TokenType::STAR:
             result = builder.create<mlir::arith::MulFOp>(loc, leftVal, rightVal);
+            std::cout << "MLIR: Added multiplication operation to MLIR" << std::endl;
             break;
         case TokenType::SLASH:
             result = builder.create<mlir::arith::DivFOp>(loc, leftVal, rightVal);
+            std::cout << "MLIR: Added division operation to MLIR" << std::endl;
             break;
         default:
-            std::cerr << "Unimplemented binary expr." << std::endl;
+            std::cerr << "MLIR: Unimplemented binary expr." << std::endl;
             break;
     }
 
@@ -128,7 +181,9 @@ std::any AstLowering::visitBinaryExpr(Binary& expr) {
 }
 
 std::any AstLowering::visitGroupingExpr(Grouping& expr) {
-    return expr.expression->accept(*this);
+    auto result = expr.expression->accept(*this);
+    std::cout << "MLIR: Added grouping expression to MLIR" << std::endl;
+    return result;
 }
 
 std::any AstLowering::visitLiteralExpr(Literal& expr) {
@@ -142,22 +197,56 @@ std::any AstLowering::visitLiteralExpr(Literal& expr) {
         result = builder.create<mlir::arith::ConstantFloatOp>(
             loc, llvm::APFloat(val), floatType
         );
+        std::cout << "MLIR: Added literal " << val << " to MLIR" << std::endl;
     } else {
-        std::cerr << "Unimplemented literal." << std::endl;
+        std::cerr << "MLIR: Unimplemented literal." << std::endl;
     }
 
-    std::cout << "Added literal into MLIR" << std::endl;
     return result;
 }
 
 std::any AstLowering::visitUnaryExpr(Unary& expr) {
+    std::cout << "MLIR: Added unary expression to MLIR" << std::endl;
+    return nullptr;
+}
+
+std::any AstLowering::visitCallExpr(Call& expr) {
+    std::cout << "MLIR: Added function call to MLIR" << std::endl;
     return nullptr;
 }
 
 std::any AstLowering::visitVariableExpr(Variable& expr) {
+    // (1) Find the variable in the symbol table.
+    auto it = symbolTable.find(expr.name.getLexeme());
+    if (it != symbolTable.end()) {
+        // (2a) Create a load op to get the variable.
+        mlir::Value result = builder.create<mlir::memref::LoadOp>(loc, it->second);
+        std::cout << "MLIR: Added variable access '" << expr.name.getLexeme() << "' to MLIR" << std::endl;
+        return result;
+    }
+
+    // (2b) Symbol does not exist, error handling.
+    std::cerr << "MLIR: Oops, referenced variable does not exist." << std::endl;
     return nullptr;
 }
 
 std::any AstLowering::visitAssignExpr(Assign& expr) {
+    // (1) Get the RHS.
+    auto valueResult = expr.value->accept(*this);
+    mlir::Value value = std::any_cast<mlir::Value>(valueResult);
+
+
+    // (2) Find the variable in symbol table.
+    auto it = symbolTable.find(expr.name.getLexeme());
+    if (it != symbolTable.end()) {
+        // (3a) Create a store op to assign a new value to it.
+        builder.create<mlir::memref::StoreOp>(loc, value, it->second);
+        std::cout << "MLIR: Added assignment to variable '" << expr.name.getLexeme() << "' to MLIR" << std::endl;
+        return value;
+    }
+
+    // (3b) Symbol does not exist, error handling.
+
+    std::cerr << "MLIR: Oops, referenced variable does not exist." << std::endl;
     return nullptr;
 }

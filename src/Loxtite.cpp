@@ -37,6 +37,7 @@ void Loxtite::run(const std::string& source) {
     context.getOrLoadDialect<mlir::arith::ArithDialect>();
     context.getOrLoadDialect<mlir::func::FuncDialect>();
     context.getOrLoadDialect<mlir::scf::SCFDialect>();
+    context.getOrLoadDialect<mlir::memref::MemRefDialect>();
     // context.getOrLoadDialect<mlir::BuiltinDialect>();
 
     AstLowering lowerer(&context);

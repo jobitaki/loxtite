@@ -10,6 +10,8 @@ My goal is to make this repo as readable and easy-to-follow as possible to aid o
 beginners who want to learn how to emit MLIR.
 
 ## How to run
+Make sure you have LLVM and MLIR installed. 
+
 To build, run:
 ```
 cd build
@@ -20,6 +22,9 @@ Then, to make and run the executable, simply run:
 make
 ./loxtite path_to_script
 ```
+This will output unoptimized MLIR into the console at the present state. The goal
+is to implement optimization passes, lower into LLVM, and create an executable from
+you script or run it directly. 
 
 ## Directory Structure
 ```

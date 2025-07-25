@@ -37,6 +37,60 @@ std::any AstLowering::visitFunctionStmt(Function& stmt) {
 }
 
 std::any AstLowering::visitIfStmt(If& stmt) {
+    // (1) Evaluate the condition
+    auto conditionResult = stmt.condition->accept(*this);
+    mlir::Value condition = std::any_cast<mlir::Value>(conditionResult);
+
+    // (2) Convert condition to i1 (1-bit int)
+    mlir::Value boolCondition;
+    if (condition.getType().isF64()) {
+        // Creates a zero
+        auto zero = builder.create<mlir::arith::ConstantFloatOp>(
+            loc, llvm::APFloat(0.0), builder.getF64Type()
+        );
+        // If condition != 0 return true
+        boolCondition = builder.create<mlir::arith::CmpFOp>(
+            loc, mlir::arith::CmpFPredicate::ONE, condition, zero
+        );
+    } else {
+        boolCondition = condition; // Assume it's i1 for now
+    }
+
+    // (3) Create the if operation
+    auto ifOp = builder.create<mlir::scf::IfOp>(
+        loc, 
+        mlir::ValueRange{}, 
+        boolCondition, 
+        stmt.elseBranch ? 1 : 0 // If else branch is not null, add it
+    );
+
+    // (4) Create the then branch
+    auto& thenRegion = ifOp.getThenRegion();
+    auto* thenBlock = builder.createBlock(&thenRegion);
+    builder.setInsertionPointToStart(thenBlock);
+
+    // (5) Execute the then branch
+    stmt.thenBranch->accept(*this);
+
+    // (6) Add yield terminator to the then block
+    builder.create<mlir::scf::YieldOp>(loc, mlir::ValueRange{});
+
+    // (7) If there is an else branch, create it
+    if (stmt.elseBranch) {
+        auto& elseRegion = ifOp.getElseRegion();
+        auto* elseBlock = builder.createBlock(&elseRegion);
+        builder.setInsertionPointToStart(elseBlock);
+
+        // (7a) Execute the else branch
+        stmt.elseBranch->accept(*this);
+
+        // (7b) Add yield terminator to the else block
+        builder.create<mlir::scf::YieldOp>(loc, mlir::ValueRange{});
+    }
+
+    // (8) Set the insertion point after the if operation
+    builder.setInsertionPointAfter(ifOp);
+
     std::cout << "MLIR: Added if statement to MLIR" << std::endl;
     return nullptr;
 }

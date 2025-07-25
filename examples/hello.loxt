@@ -11,4 +11,9 @@ while (1.0) {
     hello = hello + 1.0;
 }
 
+var mello = 0.0;
+if (0.0) {
+    mello = 1.5 + 2.1;
+}
+
 /* This comment should be ignored */

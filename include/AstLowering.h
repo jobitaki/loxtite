@@ -13,7 +13,21 @@
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
+#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/IR/BuiltinTypes.h"
+
+// MLIR Pass Includes
+#include "mlir/Conversion/ArithToLLVM/ArithToLLVM.h"
+#include "mlir/Conversion/ControlFlowToLLVM/ControlFlowToLLVM.h"
+#include "mlir/Conversion/FuncToLLVM/ConvertFuncToLLVMPass.h"
+#include "mlir/Conversion/MemRefToLLVM/MemRefToLLVM.h"
+#include "mlir/Conversion/SCFToControlFlow/SCFToControlFlow.h"
+#include "mlir/Pass/Pass.h"
+#include "mlir/Pass/PassManager.h"
+#include "mlir/Target/LLVMIR/Export.h"
+#include "llvm/Support/TargetSelect.h"
+#include "llvm/ExecutionEngine/ExecutionEngine.h"
+#include "llvm/ExecutionEngine/GenericValue.h"
 
 #include <unordered_map>
 
@@ -24,7 +38,35 @@ private:
     mlir::ModuleOp module;
     mlir::Location loc;
 
-    std::unordered_map<std::string, mlir::Value> symbolTable;
+    std::vector<std::unordered_map<std::string, mlir::Value>> symbolTableStack;
+
+    void pushScope() {
+        symbolTableStack.emplace_back();
+    }
+
+    void popScope() {
+        if (!symbolTableStack.empty()) {
+            symbolTableStack.pop_back();
+        }
+    }
+
+    mlir::Value lookupVariable(const std::string& name) {
+        for (auto it = symbolTableStack.rbegin(); it != symbolTableStack.rend(); ++it) {
+            auto found = it->find(name);
+            if (found != it->end()) {
+                return found->second;
+            }
+        }
+        throw std::runtime_error("Variable not found: " + name);
+    }
+
+    void addVariable (const std::string& name, mlir::Value value) {
+        if (!symbolTableStack.empty()) {
+            symbolTableStack.back()[name] = value;
+        } else {
+            throw std::runtime_error("No active scope to add variable: " + name);
+        }
+    }
 
 public:
     AstLowering(mlir::MLIRContext* ctx);
@@ -48,4 +90,7 @@ public:
 
     mlir::ModuleOp getModule() { return module; }
     void createMainFunction();
+    void finishMainFunction();
+    void lowerToLLVM();
+    std::unique_ptr<llvm::Module> convertToLLVMIR();
 };

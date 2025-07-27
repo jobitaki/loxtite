@@ -1,12 +1,12 @@
-var hello = 1.0;
+var hello = 1.0 > 2.0;
 
-// fun goodbye(time) {
-//     return time > 100000;
-// }
+fun goodbye(time) {
+    return time;
+}
 
-// goodbye(1+1, 2+3, 4*6);
+goodbye(1+1, 2+3, 4*6);
 
-while (1.0) {
+while (hello < 1.0) {
     // print("Hello");
     hello = hello + 1.0;
 }

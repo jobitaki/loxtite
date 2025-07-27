@@ -48,9 +48,11 @@ void Loxtite::run(const std::string& source) {
         stmt->accept(lowerer);
     }
 
-    auto module = lowerer.getModule();
+    lowerer.finishMainFunction();
 
-    module.print(llvm::outs());
+    lowerer.lowerToLLVM();
+
+    lowerer.getModule().print(llvm::outs());
 }
 
 void Loxtite::runFile(const std::string& path) {

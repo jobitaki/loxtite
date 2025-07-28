@@ -3,7 +3,7 @@
 #include <iostream>
 
 AstLowering::AstLowering(mlir::MLIRContext* ctx) 
-    : context(ctx), builder(ctx), loc(builder.getUnknownLoc()) {
+    : context(ctx), builder(ctx), loc(builder.getUnknownLoc()), llvmContext() {
     module = mlir::ModuleOp::create(loc);
     builder.setInsertionPointToEnd(module.getBody());
     // For global scope
@@ -45,7 +45,13 @@ void AstLowering::lowerToLLVM() {
 }
 
 std::unique_ptr<llvm::Module> AstLowering::convertToLLVMIR() {
+    auto llvmModule = mlir::translateModuleToLLVMIR(module, llvmContext);
+    if (!llvmModule) {
+        std::cerr << "Failed to translate MLIR module to LLVM" << std::endl;
+        return nullptr;
+    }
 
+    return llvmModule;
 }
 
 std::any AstLowering::visitBlockStmt(Block& stmt) {
@@ -80,7 +86,7 @@ std::any AstLowering::visitFunctionStmt(Function& stmt) {
 
     // (3) Save current insertion point -- We do this because everything else
     //     is inserted within the main function body. We want to exit temporarily.
-    auto oldInsertionPoint = builder.saveInsertionPoint();
+    auto savedIP = builder.saveInsertionPoint();
 
     // (4) Set the insertion point to end of module body (start is also fine)
     builder.setInsertionPointToEnd(module.getBody());
@@ -131,7 +137,7 @@ std::any AstLowering::visitFunctionStmt(Function& stmt) {
     popScope();
 
     // (12) Restore insertion point
-    builder.restoreInsertionPoint(oldInsertionPoint);
+    builder.restoreInsertionPoint(savedIP);
 
     std::cout << "MLIR: Added function statement to MLIR" << std::endl;
     return nullptr;
@@ -160,33 +166,38 @@ std::any AstLowering::visitIfStmt(If& stmt) {
     // (3) Create the if operation
     auto ifOp = builder.create<mlir::scf::IfOp>(
         loc, 
-        mlir::ValueRange{}, 
+        mlir::TypeRange{}, 
         boolCondition, 
-        stmt.elseBranch ? 1 : 0 // If else branch is not null, add it
+        stmt.elseBranch != nullptr // If else branch is not null, add it
     );
+
+    std::cout << "Creating then branch" << std::endl;
 
     // (4) Create the then branch
     auto& thenRegion = ifOp.getThenRegion();
-    auto* thenBlock = builder.createBlock(&thenRegion);
-    builder.setInsertionPointToStart(thenBlock);
+    auto& thenBlock = thenRegion.front();
+    builder.setInsertionPointToStart(&thenBlock);
 
     // (5) Execute the then branch
     stmt.thenBranch->accept(*this);
 
+    std::cout << "Terminate Then with Yield" << std::endl;
     // (6) Add yield terminator to the then block
-    builder.create<mlir::scf::YieldOp>(loc, mlir::ValueRange{});
+    // builder.create<mlir::scf::YieldOp>(loc);
 
     // (7) If there is an else branch, create it
     if (stmt.elseBranch) {
+        std::cout << "Creating else branch" << std::endl;
         auto& elseRegion = ifOp.getElseRegion();
-        auto* elseBlock = builder.createBlock(&elseRegion);
-        builder.setInsertionPointToStart(elseBlock);
+        auto& elseBlock = elseRegion.front();
+        builder.setInsertionPointToStart(&elseBlock);
 
         // (7a) Execute the else branch
         stmt.elseBranch->accept(*this);
 
+        std::cout << "Terminate Else with Yield" << std::endl;
         // (7b) Add yield terminator to the else block
-        builder.create<mlir::scf::YieldOp>(loc, mlir::ValueRange{});
+        // builder.create<mlir::scf::YieldOp>(loc);
     }
 
     // (8) Set the insertion point after the if operation
@@ -265,6 +276,61 @@ std::any AstLowering::visitWhileStmt(While& stmt) {
 }
 
 std::any AstLowering::visitPrintStmt(Print& stmt) {
+    // (1) Evaluate the expression to print
+    auto exprResult = stmt.expression->accept(*this);
+    mlir::Value value = std::any_cast<mlir::Value>(exprResult);
+
+    // (2) Create a global string constant for the format
+    static int formatStrCounter = 0;
+    std::string formatName = "format_str_" + std::to_string(formatStrCounter++);
+    
+    auto savedIP = builder.saveInsertionPoint();
+    builder.setInsertionPointToEnd(module.getBody());
+    
+    auto formatStr = builder.create<mlir::LLVM::GlobalOp>(
+        loc,
+        mlir::LLVM::LLVMArrayType::get(builder.getI8Type(), 5), // "%.6g\n\0"
+        /*isConstant=*/true,
+        mlir::LLVM::Linkage::Private,
+        formatName,
+        builder.getStringAttr("%.6g\n")
+    );
+    
+    builder.restoreInsertionPoint(savedIP);
+
+    // (3) Get address of format string
+    auto formatAddr = builder.create<mlir::LLVM::AddressOfOp>(loc, formatStr);
+    
+    // (4) Cast to i8*
+    auto i8PtrType = mlir::LLVM::LLVMPointerType::get(context);
+    auto formatPtr = builder.create<mlir::LLVM::BitcastOp>(
+        loc, i8PtrType, formatAddr
+    );
+
+    // (5) Declare printf if not already declared
+    auto printfFunc = module.lookupSymbol<mlir::LLVM::LLVMFuncOp>("printf");
+    if (!printfFunc) {
+        auto savedIP2 = builder.saveInsertionPoint();
+        builder.setInsertionPointToEnd(module.getBody());
+        
+        auto printfType = mlir::LLVM::LLVMFunctionType::get(
+            builder.getI32Type(), // return type
+            {i8PtrType}, // parameters
+            /*isVarArg=*/true
+        );
+        
+        printfFunc = builder.create<mlir::LLVM::LLVMFuncOp>(
+            loc, "printf", printfType
+        );
+        
+        builder.restoreInsertionPoint(savedIP2);
+    }
+
+    // (6) Call printf
+    builder.create<mlir::LLVM::CallOp>(
+        loc, printfFunc, mlir::ValueRange{formatPtr, value}
+    );
+
     std::cout << "MLIR: Added print statement to MLIR" << std::endl;
     return nullptr;
 }

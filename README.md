@@ -15,7 +15,7 @@ cmake .. -DLLVM_DIR=/opt/homebrew/lib/cmake/llvm -DMLIR_DIR=/opt/homebrew/lib/cm
 ```
 Then, to make and run the executable, simply run:
 ```
-make
+make -j$(sysctl -n hw.ncpu)
 ./loxtite path_to_script
 ```
 This will output unoptimized MLIR into the console at the present state. The goal

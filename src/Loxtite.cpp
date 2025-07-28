@@ -33,12 +33,25 @@ void Loxtite::run(const std::string& source) {
     // }
 
     mlir::MLIRContext context;
+
+    mlir::DialectRegistry registry;
+    registry.insert<mlir::LLVM::LLVMDialect,
+                    mlir::BuiltinDialect,
+                    mlir::arith::ArithDialect,
+                    mlir::func::FuncDialect,
+                    mlir::scf::SCFDialect,
+                    mlir::memref::MemRefDialect>();
+
+    mlir::registerLLVMDialectTranslation(registry);
+    mlir::registerBuiltinDialectTranslation(registry);
     
-    context.getOrLoadDialect<mlir::arith::ArithDialect>();
-    context.getOrLoadDialect<mlir::func::FuncDialect>();
-    context.getOrLoadDialect<mlir::scf::SCFDialect>();
-    context.getOrLoadDialect<mlir::memref::MemRefDialect>();
+    // context.getOrLoadDialect<mlir::arith::ArithDialect>();
+    // context.getOrLoadDialect<mlir::func::FuncDialect>();
+    // context.getOrLoadDialect<mlir::scf::SCFDialect>();
+    // context.getOrLoadDialect<mlir::memref::MemRefDialect>();
     // context.getOrLoadDialect<mlir::BuiltinDialect>();
+    context.appendDialectRegistry(registry);
+    context.loadAllAvailableDialects();
 
     AstLowering lowerer(&context);
 
@@ -52,7 +65,10 @@ void Loxtite::run(const std::string& source) {
 
     lowerer.lowerToLLVM();
 
-    lowerer.getModule().print(llvm::outs());
+    auto llvmModule = lowerer.convertToLLVMIR();
+    llvmModule->print(llvm::outs(), nullptr);
+
+    // lowerer.getModule().print(llvm::outs());
 }
 
 void Loxtite::runFile(const std::string& path) {

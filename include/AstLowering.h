@@ -14,6 +14,7 @@
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/IR/BuiltinDialect.h"
 #include "mlir/IR/BuiltinTypes.h"
 
 // MLIR Pass Includes
@@ -25,6 +26,11 @@
 #include "mlir/Pass/Pass.h"
 #include "mlir/Pass/PassManager.h"
 #include "mlir/Target/LLVMIR/Export.h"
+#include "mlir/Target/LLVMIR/ModuleTranslation.h"
+#include "mlir/Target/LLVMIR/LLVMTranslationInterface.h"
+#include "mlir/Target/LLVMIR/Dialect/LLVMIR/LLVMToLLVMIRTranslation.h"
+#include "mlir//Target/LLVMIR/Dialect/Builtin/BuiltinToLLVMIRTranslation.h"
+#include "mlir/Target/LLVMIR/Dialect/All.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/ExecutionEngine/ExecutionEngine.h"
 #include "llvm/ExecutionEngine/GenericValue.h"
@@ -37,6 +43,7 @@ private:
     mlir::OpBuilder builder;
     mlir::ModuleOp module;
     mlir::Location loc;
+    llvm::LLVMContext llvmContext;
 
     std::vector<std::unordered_map<std::string, mlir::Value>> symbolTableStack;
 

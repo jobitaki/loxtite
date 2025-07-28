@@ -26,7 +26,8 @@ include(HandleLLVMOptions)
 
 # Include directories
 include_directories(${LLVM_INCLUDE_DIRS})
-include_directories(${MLIR_INCLUDE_DIRS})
+include_directories(${MLIR_INCLUDE_DIRS}
+                    ${MLIR_BINARY_DIR}/tools/mlir/include)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
 
 # Separate LLVM and MLIR definitions
@@ -74,6 +75,8 @@ target_link_libraries(loxtite
     MLIRArithDialect
     MLIRMemRefDialect
     MLIRSCFDialect
+    MLIRTargetLLVMIRExport
+    MLIRToLLVMIRTranslationRegistration
     ${llvm_libs}
 )
 

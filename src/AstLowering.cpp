@@ -64,13 +64,13 @@ std::any AstLowering::visitBlockStmt(Block& stmt) {
 
     popScope();
 
-    std::cout << "MLIR: Added block statement to MLIR" << std::endl;
+    // std::cout << "MLIR: Added block statement to MLIR" << std::endl;
     return nullptr;
 }
 
 std::any AstLowering::visitExpressionStmt(Expression& stmt) {
     auto result = stmt.expression->accept(*this);
-    std::cout << "MLIR: Added expression statement to MLIR" << std::endl;
+    // std::cout << "MLIR: Added expression statement to MLIR" << std::endl;
     return result;
 }
 
@@ -139,7 +139,7 @@ std::any AstLowering::visitFunctionStmt(Function& stmt) {
     // (12) Restore insertion point
     builder.restoreInsertionPoint(savedIP);
 
-    std::cout << "MLIR: Added function statement to MLIR" << std::endl;
+    // std::cout << "MLIR: Added function statement to MLIR" << std::endl;
     return nullptr;
 }
 
@@ -171,8 +171,6 @@ std::any AstLowering::visitIfStmt(If& stmt) {
         stmt.elseBranch != nullptr // If else branch is not null, add it
     );
 
-    std::cout << "Creating then branch" << std::endl;
-
     // (4) Create the then branch
     auto& thenRegion = ifOp.getThenRegion();
     auto& thenBlock = thenRegion.front();
@@ -181,13 +179,11 @@ std::any AstLowering::visitIfStmt(If& stmt) {
     // (5) Execute the then branch
     stmt.thenBranch->accept(*this);
 
-    std::cout << "Terminate Then with Yield" << std::endl;
     // (6) Add yield terminator to the then block
     // builder.create<mlir::scf::YieldOp>(loc);
 
     // (7) If there is an else branch, create it
     if (stmt.elseBranch) {
-        std::cout << "Creating else branch" << std::endl;
         auto& elseRegion = ifOp.getElseRegion();
         auto& elseBlock = elseRegion.front();
         builder.setInsertionPointToStart(&elseBlock);
@@ -195,7 +191,6 @@ std::any AstLowering::visitIfStmt(If& stmt) {
         // (7a) Execute the else branch
         stmt.elseBranch->accept(*this);
 
-        std::cout << "Terminate Else with Yield" << std::endl;
         // (7b) Add yield terminator to the else block
         // builder.create<mlir::scf::YieldOp>(loc);
     }
@@ -203,7 +198,7 @@ std::any AstLowering::visitIfStmt(If& stmt) {
     // (8) Set the insertion point after the if operation
     builder.setInsertionPointAfter(ifOp);
 
-    std::cout << "MLIR: Added if statement to MLIR" << std::endl;
+    // std::cout << "MLIR: Added if statement to MLIR" << std::endl;
     return nullptr;
 }
 
@@ -271,7 +266,7 @@ std::any AstLowering::visitWhileStmt(While& stmt) {
     // (9) Set the insertion point after the while operation
     builder.setInsertionPointAfter(whileOp);
 
-    std::cout << "MLIR: Added while loop to MLIR" << std::endl;
+    // std::cout << "MLIR: Added while loop to MLIR" << std::endl;
     return mlir::Value{};
 }
 
@@ -331,7 +326,7 @@ std::any AstLowering::visitPrintStmt(Print& stmt) {
         loc, printfFunc, mlir::ValueRange{formatPtr, value}
     );
 
-    std::cout << "MLIR: Added print statement to MLIR" << std::endl;
+    // std::cout << "MLIR: Added print statement to MLIR" << std::endl;
     return nullptr;
 }
 
@@ -349,7 +344,7 @@ std::any AstLowering::visitReturnStmt(Return& stmt) {
 
     builder.create<mlir::func::ReturnOp>(loc, returnValue);
 
-    std::cout << "MLIR: Added return statement to MLIR" << std::endl;
+    // std::cout << "MLIR: Added return statement to MLIR" << std::endl;
     return nullptr;
 }
 
@@ -378,7 +373,7 @@ std::any AstLowering::visitVarStmt(Var& stmt) {
     // (4) Store the memory reference in symbol table
     addVariable(stmt.name.getLexeme(), allocaOp);
 
-    std::cout << "MLIR: Added variable declaration '" << stmt.name.getLexeme() << "' to MLIR" << std::endl;
+    // std::cout << "MLIR: Added variable declaration '" << stmt.name.getLexeme() << "' to MLIR" << std::endl;
     return allocaOp;
 }
 
@@ -394,19 +389,19 @@ std::any AstLowering::visitBinaryExpr(Binary& expr) {
     switch (expr.oper.getType()) {
         case TokenType::PLUS:
             result = builder.create<mlir::arith::AddFOp>(loc, leftVal, rightVal);
-            std::cout << "MLIR: Added addition operation to MLIR" << std::endl;
+            // std::cout << "MLIR: Added addition operation to MLIR" << std::endl;
             break;
         case TokenType::MINUS:
             result = builder.create<mlir::arith::SubFOp>(loc, leftVal, rightVal);
-            std::cout << "MLIR: Added subtraction operation to MLIR" << std::endl;
+            // std::cout << "MLIR: Added subtraction operation to MLIR" << std::endl;
             break;
         case TokenType::STAR:
             result = builder.create<mlir::arith::MulFOp>(loc, leftVal, rightVal);
-            std::cout << "MLIR: Added multiplication operation to MLIR" << std::endl;
+            // std::cout << "MLIR: Added multiplication operation to MLIR" << std::endl;
             break;
         case TokenType::SLASH:
             result = builder.create<mlir::arith::DivFOp>(loc, leftVal, rightVal);
-            std::cout << "MLIR: Added division operation to MLIR" << std::endl;
+            // std::cout << "MLIR: Added division operation to MLIR" << std::endl;
             break;
         case TokenType::LESS:
             result = builder.create<mlir::arith::CmpFOp>(
@@ -448,7 +443,7 @@ std::any AstLowering::visitBinaryExpr(Binary& expr) {
 
 std::any AstLowering::visitGroupingExpr(Grouping& expr) {
     auto result = expr.expression->accept(*this);
-    std::cout << "MLIR: Added grouping expression to MLIR" << std::endl;
+    // std::cout << "MLIR: Added grouping expression to MLIR" << std::endl;
     return result;
 }
 
@@ -463,7 +458,7 @@ std::any AstLowering::visitLiteralExpr(Literal& expr) {
         result = builder.create<mlir::arith::ConstantFloatOp>(
             loc, llvm::APFloat(val), floatType
         );
-        std::cout << "MLIR: Added literal " << val << " to MLIR" << std::endl;
+        // std::cout << "MLIR: Added literal " << val << " to MLIR" << std::endl;
     } else {
         std::cerr << "MLIR: Unimplemented literal." << std::endl;
     }
@@ -472,7 +467,7 @@ std::any AstLowering::visitLiteralExpr(Literal& expr) {
 }
 
 std::any AstLowering::visitUnaryExpr(Unary& expr) {
-    std::cout << "MLIR: Added unary expression to MLIR" << std::endl;
+    // std::cout << "MLIR: Added unary expression to MLIR" << std::endl;
     return nullptr;
 }
 
@@ -513,7 +508,7 @@ std::any AstLowering::visitCallExpr(Call& expr) {
     // (5) Get the result (TODO handle empty return)
     mlir::Value result = callOp.getResult(0);
 
-    std::cout << "MLIR: Added function call '" << functionName << "' to MLIR" << std::endl;
+    // std::cout << "MLIR: Added function call '" << functionName << "' to MLIR" << std::endl;
     return result;
 }
 
@@ -523,7 +518,7 @@ std::any AstLowering::visitVariableExpr(Variable& expr) {
     
     // (2) Create a load op to get the variable.
     mlir::Value result = builder.create<mlir::memref::LoadOp>(loc, it);
-    std::cout << "MLIR: Added variable access '" << expr.name.getLexeme() << "' to MLIR" << std::endl;
+    // std::cout << "MLIR: Added variable access '" << expr.name.getLexeme() << "' to MLIR" << std::endl;
     return result;
 }
 
@@ -538,6 +533,6 @@ std::any AstLowering::visitAssignExpr(Assign& expr) {
 
     // (3) Create a store op to assign a new value to it.
     builder.create<mlir::memref::StoreOp>(loc, value, it);
-    std::cout << "MLIR: Added assignment to variable '" << expr.name.getLexeme() << "' to MLIR" << std::endl;
+    // std::cout << "MLIR: Added assignment to variable '" << expr.name.getLexeme() << "' to MLIR" << std::endl;
     return value;
 }

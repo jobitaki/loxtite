@@ -10,4 +10,4 @@ fun fibonacci(n) {
     return result;
 }
 
-print(fibonacci(3));
+print(fibonacci(10));

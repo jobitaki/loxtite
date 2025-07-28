@@ -104,7 +104,7 @@ std::unique_ptr<Stmt> Parser::function(std::string_view kind) {
 
     std::vector<StmtPtr> body = block();
 
-    std::cout << "Parser: Added function decl" << std::endl;
+    // std::cout << "Parser: Added function decl" << std::endl;
     return std::make_unique<Function>(name, std::move(parameters), std::move(body));
 }
 
@@ -118,7 +118,7 @@ std::unique_ptr<Stmt> Parser::varStatement() {
     }
 
     consume(TokenType::SEMICOLON, "Expect semicolon.");
-    std::cout << "Parser: Added Var statement to tree" << std::endl;
+    // std::cout << "Parser: Added Var statement to tree" << std::endl;
     return std::make_unique<Var>(name, std::move(initializer));
 }
 
@@ -143,7 +143,7 @@ std::unique_ptr<Stmt> Parser::ifStatement() {
         elseBranch = statement();
     }
 
-    std::cout << "Parser: Added If statement to tree" << std::endl;
+    // std::cout << "Parser: Added If statement to tree" << std::endl;
     return std::make_unique<If>(std::move(condition), std::move(thenBranch), 
                                 std::move(elseBranch));
 }
@@ -155,7 +155,7 @@ std::unique_ptr<Stmt> Parser::whileStatement() {
 
     auto body = statement();
 
-    std::cout << "Parser: Added While statement to tree" << std::endl;
+    // std::cout << "Parser: Added While statement to tree" << std::endl;
     return std::make_unique<While>(std::move(condition), std::move(body));
 }
 
@@ -166,7 +166,7 @@ std::unique_ptr<Stmt> Parser::printStatement() {
     consume(TokenType::RIGHT_PAREN, "Expect ')'.");
     consume(TokenType::SEMICOLON, "Expect ';'.");
 
-    std::cout << "Parser: Added Print statement to tree" << std::endl;
+    // std::cout << "Parser: Added Print statement to tree" << std::endl;
     return std::make_unique<Print>(keyword, std::move(expr));
 }
 
@@ -175,14 +175,14 @@ std::unique_ptr<Stmt> Parser::returnStatement() {
     auto expr = expression();
     consume(TokenType::SEMICOLON, "Expect ';'.");
 
-    std::cout << "Parser: Added Return statement" << std::endl;
+    // std::cout << "Parser: Added Return statement" << std::endl;
     return std::make_unique<Return>(keyword, std::move(expr));
 }
 
 std::unique_ptr<Stmt> Parser::exprStatement() {
     auto expr = expression();
     consume(TokenType::SEMICOLON, "Expect ;.");
-    std::cout << "Parser: Added Expr statement to tree" << std::endl;
+    // std::cout << "Parser: Added Expr statement to tree" << std::endl;
     return std::make_unique<Expression>(std::move(expr));
 }
 
@@ -308,7 +308,7 @@ std::unique_ptr<Expr> Parser::finishCall(ExprPtr callee) {
 
     Token paren = consume(RIGHT_PAREN, "Expect ')' after arguments.");
 
-    std::cout << "Parser: Added function call to tree" << std::endl;
+    // std::cout << "Parser: Added function call to tree" << std::endl;
     return std::make_unique<Call>(std::move(callee), paren, std::move(arguments));
 }
 

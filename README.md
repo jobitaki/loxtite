@@ -18,9 +18,10 @@ Then, to make and run the executable, simply run:
 make -j$(sysctl -n hw.ncpu)
 ./loxtite path_to_script
 ```
-This will output unoptimized MLIR into the console at the present state. The goal
-is to implement optimization passes, lower into LLVM, and create an executable from
-you script or run it directly. 
+This will create two files, out.mlir and out.ll. Respectively, they contain the unoptimized MLIR code, and the MLIR code lowered to LLVM IR. To run your code with the LLVM interpreter, run:
+```
+lli out.ll
+```
 
 ## Directory Structure
 ```

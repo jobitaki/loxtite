@@ -11,6 +11,9 @@
 #include "AstPrinter.h"
 #include "AstLowering.h"
 
+#include "llvm/Support/raw_ostream.h"
+#include "llvm/Support/FileSystem.h"
+
 bool Loxtite::hadError = false;
 
 void Loxtite::run(const std::string& source) {
@@ -45,11 +48,6 @@ void Loxtite::run(const std::string& source) {
     mlir::registerLLVMDialectTranslation(registry);
     mlir::registerBuiltinDialectTranslation(registry);
     
-    // context.getOrLoadDialect<mlir::arith::ArithDialect>();
-    // context.getOrLoadDialect<mlir::func::FuncDialect>();
-    // context.getOrLoadDialect<mlir::scf::SCFDialect>();
-    // context.getOrLoadDialect<mlir::memref::MemRefDialect>();
-    // context.getOrLoadDialect<mlir::BuiltinDialect>();
     context.appendDialectRegistry(registry);
     context.loadAllAvailableDialects();
 
@@ -62,13 +60,29 @@ void Loxtite::run(const std::string& source) {
     }
 
     lowerer.finishMainFunction();
+    
+    std::error_code ec;
+    llvm::raw_fd_ostream mlirFile("out.mlir", ec, llvm::sys::fs::OF_None);
+    if (ec) {
+        std::cerr << "Error opening out.mlir" << std::endl;
+        return;
+    }
+    lowerer.getModule().print(mlirFile);
+    mlirFile.close();
 
     lowerer.lowerToLLVM();
 
     auto llvmModule = lowerer.convertToLLVMIR();
-    llvmModule->print(llvm::outs(), nullptr);
 
-    // lowerer.getModule().print(llvm::outs());
+    llvm::raw_fd_ostream llvmFile("out.ll", ec, llvm::sys::fs::OF_None);
+    if (ec) {
+        std::cerr << "Error opening out.mlir" << std::endl;
+        return;
+    }
+
+    llvmModule->print(llvmFile, nullptr);
+    llvmFile.close();
+
 }
 
 void Loxtite::runFile(const std::string& path) {

@@ -32,4 +32,45 @@ src - C++ source
 ```
 
 ## How to write Loxtite
-Coming soon!
+```
+// Declare variables. Only floats supported for now.
+var x = 0.0;
+
+// Assign variables.
+x = 10.0;
+
+// Arithmetic
+(1.0 + 2.0) * 3.0 / (4.0 - 6.0);
+
+// Inequality
+1.0 <= 2.0; /* Returns 1-bit integer, so use for conditionals for now. */
+
+// Control flow
+if (x) {
+    ... 
+    /* No returns inside of body */
+    ...
+} else { 
+    ...
+    /* No else ifs supported for now */
+    ...
+}
+
+while (...) {
+    ...
+    /* No returns inside of body */
+    ...
+}
+
+// Functions
+fun foo(arg1, arg2) {
+    return arg1 + arg2;
+}
+
+foo(1.0, 2.0);
+
+// Built in functions
+print(0.0); /* Print only supports float for now */
+print(x);
+
+```

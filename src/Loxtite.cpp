@@ -11,9 +11,6 @@
 #include "AstPrinter.h"
 #include "AstLowering.h"
 
-#include "llvm/Support/raw_ostream.h"
-#include "llvm/Support/FileSystem.h"
-
 bool Loxtite::hadError = false;
 
 void Loxtite::run(const std::string& source) {

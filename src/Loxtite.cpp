@@ -40,6 +40,7 @@ void Loxtite::run(const std::string& source) {
                     mlir::arith::ArithDialect,
                     mlir::func::FuncDialect,
                     mlir::scf::SCFDialect,
+                    mlir::cf::ControlFlowDialect,
                     mlir::memref::MemRefDialect>();
 
     mlir::registerLLVMDialectTranslation(registry);
@@ -57,6 +58,8 @@ void Loxtite::run(const std::string& source) {
     }
 
     lowerer.finishMainFunction();
+
+    lowerer.cleanUpDeadBlocks();
     
     std::error_code ec;
     llvm::raw_fd_ostream mlirFile("out.mlir", ec, llvm::sys::fs::OF_None);
@@ -66,6 +69,8 @@ void Loxtite::run(const std::string& source) {
     }
     lowerer.getModule().print(mlirFile);
     mlirFile.close();
+
+    std::cerr << "Successfully output MLIR." << std::endl;
 
     lowerer.lowerToLLVM();
 
@@ -79,6 +84,8 @@ void Loxtite::run(const std::string& source) {
 
     llvmModule->print(llvmFile, nullptr);
     llvmFile.close();
+    
+    std::cerr << "Successfully output LLVM." << std::endl;
 
 }
 

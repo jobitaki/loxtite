@@ -75,6 +75,7 @@ target_link_libraries(loxtite
     MLIRArithDialect
     MLIRMemRefDialect
     MLIRSCFDialect
+    MLIRControlFlowDialect
     MLIRTargetLLVMIRExport
     MLIRToLLVMIRTranslationRegistration
     ${llvm_libs}

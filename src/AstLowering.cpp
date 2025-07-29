@@ -24,12 +24,22 @@ void AstLowering::finishMainFunction() {
     popScope();
 }
 
+void AstLowering::cleanUpDeadBlocks() {
+    // Run canonicalizer to remove dead code
+    mlir::PassManager pm(context);
+    pm.addPass(mlir::createCanonicalizerPass());
+    
+    if (mlir::failed(pm.run(module))) {
+        std::cerr << "Failed to cleanup dead blocks" << std::endl;
+    }
+}
+
 void AstLowering::lowerToLLVM() {
     // (1) Create a pass manager
     mlir::PassManager pm(context);
 
     // (2) Add conversion passes
-    pm.addPass(mlir::createConvertSCFToCFPass());
+    // pm.addPass(mlir::createConvertSCFToCFPass());
     pm.addPass(mlir::createArithToLLVMConversionPass());
     pm.addPass(mlir::createConvertControlFlowToLLVMPass());
     pm.addPass(mlir::createFinalizeMemRefToLLVMConversionPass());
@@ -126,11 +136,16 @@ std::any AstLowering::visitFunctionStmt(Function& stmt) {
 
     // (10) If there was no return add one.
     auto* currentBlock = builder.getInsertionBlock();
-    if (currentBlock->empty() || !currentBlock->back().hasTrait<mlir::OpTrait::IsTerminator>()) {
-        mlir::Value defaultReturn = builder.create<mlir::arith::ConstantFloatOp>(
-            loc, llvm::APFloat(0.0), builder.getF64Type()
-        );
-        builder.create<mlir::func::ReturnOp>(loc, defaultReturn);
+    if (!currentBlock->hasNoPredecessors()) {
+        if (currentBlock->empty() || 
+            !currentBlock->back().hasTrait<mlir::OpTrait::IsTerminator>()) {
+            mlir::Value defaultReturn = builder.create<mlir::arith::ConstantFloatOp>(
+                loc, llvm::APFloat(0.0), builder.getF64Type()
+            );
+            builder.create<mlir::func::ReturnOp>(loc, defaultReturn);
+        }
+    } else {
+        currentBlock->erase();
     }
 
     // (11) Pop scope
@@ -164,39 +179,41 @@ std::any AstLowering::visitIfStmt(If& stmt) {
     }
 
     // (3) Create the if operation
-    auto ifOp = builder.create<mlir::scf::IfOp>(
-        loc, 
-        mlir::TypeRange{}, 
-        boolCondition, 
-        stmt.elseBranch != nullptr // If else branch is not null, add it
-    );
+    auto* currentBlock = builder.getInsertionBlock();
+    auto* thenBlock = builder.createBlock(currentBlock->getParent());
+    auto* elseBlock = stmt.elseBranch ? builder.createBlock(currentBlock->getParent()) : nullptr;
+    auto* mergeBlock = builder.createBlock(currentBlock->getParent());
+
+    builder.setInsertionPointToEnd(currentBlock);
+
+    if (stmt.elseBranch) {
+        builder.create<mlir::cf::CondBranchOp>(
+            loc, boolCondition, thenBlock, elseBlock);
+    } else {
+        builder.create<mlir::cf::CondBranchOp>(
+            loc, boolCondition, thenBlock, mergeBlock);
+    }
 
     // (4) Create the then branch
-    auto& thenRegion = ifOp.getThenRegion();
-    auto& thenBlock = thenRegion.front();
-    builder.setInsertionPointToStart(&thenBlock);
-
-    // (5) Execute the then branch
+    builder.setInsertionPointToStart(thenBlock);
     stmt.thenBranch->accept(*this);
-
-    // (6) Add yield terminator to the then block
-    // builder.create<mlir::scf::YieldOp>(loc);
+    if (!thenBlock->back().hasTrait<mlir::OpTrait::IsTerminator>()) {
+        // Create branch to merge block, only if the then block has no term.
+        builder.create<mlir::cf::BranchOp>(loc, mergeBlock);
+    }
 
     // (7) If there is an else branch, create it
     if (stmt.elseBranch) {
-        auto& elseRegion = ifOp.getElseRegion();
-        auto& elseBlock = elseRegion.front();
-        builder.setInsertionPointToStart(&elseBlock);
-
-        // (7a) Execute the else branch
+        builder.setInsertionPointToStart(elseBlock);
         stmt.elseBranch->accept(*this);
-
-        // (7b) Add yield terminator to the else block
-        // builder.create<mlir::scf::YieldOp>(loc);
+        if (!elseBlock->back().hasTrait<mlir::OpTrait::IsTerminator>()) {
+            // Create branch to merge block, only if the else block has no term.
+            builder.create<mlir::cf::BranchOp>(loc, mergeBlock);
+        }
     }
 
     // (8) Set the insertion point after the if operation
-    builder.setInsertionPointAfter(ifOp);
+    builder.setInsertionPointToStart(mergeBlock);
 
     // std::cout << "MLIR: Added if statement to MLIR" << std::endl;
     return nullptr;

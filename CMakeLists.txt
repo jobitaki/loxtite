@@ -29,6 +29,7 @@ include_directories(${LLVM_INCLUDE_DIRS})
 include_directories(${MLIR_INCLUDE_DIRS}
                     ${MLIR_BINARY_DIR}/tools/mlir/include)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/dialect)
 
 # Separate LLVM and MLIR definitions
 separate_arguments(LLVM_DEFINITIONS_LIST NATIVE_COMMAND ${LLVM_DEFINITIONS})
@@ -46,6 +47,7 @@ set(SOURCES
     src/AstLowering.cpp
     src/Loxtite.cpp
     src/AstPrinter.cpp
+    dialect/MLoopDialect.cpp
     # Add other source files as needed
 )
 

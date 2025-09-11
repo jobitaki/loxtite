@@ -41,7 +41,8 @@ void Loxtite::run(const std::string& source) {
                     mlir::func::FuncDialect,
                     mlir::scf::SCFDialect,
                     mlir::cf::ControlFlowDialect,
-                    mlir::memref::MemRefDialect>();
+                    mlir::memref::MemRefDialect,
+                    mlir::mloop::MLoopDialect>();
 
     mlir::registerLLVMDialectTranslation(registry);
     mlir::registerBuiltinDialectTranslation(registry);

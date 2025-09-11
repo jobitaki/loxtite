@@ -1,3 +1,4 @@
+include "mlir/IR/DialectBase.td"
 include "mlir/IR/OpBase.td"
 include "mlir/Interfaces/FunctionInterfaces.td"
 include "mlir/IR/SymbolInterfaces.td"
@@ -27,17 +28,22 @@ class M_Loop_Op<string mnemonic, list<Trait> traits = []> :
 // ConstantOp
 //===----------------------------------------------------------------------===//
 
-def ConstantOp : M_Loop_Op<"constant", [Pure]> {
-    // // Summary
-    // let summary = "constant";
-    // let description = [{
-    //     Constant operation turns a literal into an SSA value. The data is 
-    //     attached to the operation as an attribute. For example:
+def ConstantOp : M_Loop_Op<"constant", [ConstantLike, Pure]> {
+    // Summary
+    let summary = "constant";
+    let description = [{
+        Constant operation turns a literal into an SSA value. The data is 
+        attached to the operation as an attribute. For example:
 
-    //     ```mlir
-    //     %0 = mloop.constant 10 : f64
-    //     ```
-    // }]
+        ```mlir
+        %0 = mloop.constant 10 : f64
+        ```
+    }];
 
-    // let arguments = (ins )
+    let arguments = (ins F64Attr:$value);
+    let results = (outs F64:$result);
+
+    let builders = [
+        OpBuilder<(ins "double":$value)>
+    ];
 }

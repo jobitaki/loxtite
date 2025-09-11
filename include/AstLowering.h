@@ -3,6 +3,9 @@
 #include "Expr.h"
 #include "Stmt.h"
 
+// Custom Dialect Includes
+#include "MLoopDialect.h"
+
 // MLIR Includes
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinOps.h"

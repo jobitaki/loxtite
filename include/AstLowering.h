@@ -24,6 +24,7 @@
 // MLIR Pass Includes
 #include "mlir/Conversion/ArithToLLVM/ArithToLLVM.h"
 #include "mlir/Conversion/ControlFlowToLLVM/ControlFlowToLLVM.h"
+#include "mlir/Conversion/ControlFlowToSCF/ControlFlowToSCF.h"
 #include "mlir/Conversion/FuncToLLVM/ConvertFuncToLLVMPass.h"
 #include "mlir/Conversion/MemRefToLLVM/MemRefToLLVM.h"
 #include "mlir/Conversion/SCFToControlFlow/SCFToControlFlow.h"
@@ -53,20 +54,21 @@ private:
     mlir::Location loc;
     llvm::LLVMContext llvmContext;
 
-    std::vector<std::unordered_map<std::string, mlir::Value>> symbolTableStack;
+    // std::vector<std::unordered_map<std::string, mlir::Value>> symbolTableStack;
+    std::vector<std::unordered_map<std::string, mlir::Value>> ssaVarStack;
 
     void pushScope() {
-        symbolTableStack.emplace_back();
+        ssaVarStack.emplace_back();
     }
 
     void popScope() {
-        if (!symbolTableStack.empty()) {
-            symbolTableStack.pop_back();
+        if (!ssaVarStack.empty()) {
+            ssaVarStack.pop_back();
         }
     }
 
     mlir::Value lookupVariable(const std::string& name) {
-        for (auto it = symbolTableStack.rbegin(); it != symbolTableStack.rend(); ++it) {
+        for (auto it = ssaVarStack.rbegin(); it != ssaVarStack.rend(); ++it) {
             auto found = it->find(name);
             if (found != it->end()) {
                 return found->second;
@@ -75,9 +77,9 @@ private:
         throw std::runtime_error("Variable not found: " + name);
     }
 
-    void addVariable (const std::string& name, mlir::Value value) {
-        if (!symbolTableStack.empty()) {
-            symbolTableStack.back()[name] = value;
+    void addVariable(const std::string& name, mlir::Value value) {
+        if (!ssaVarStack.empty()) {
+            ssaVarStack.back()[name] = value;
         } else {
             throw std::runtime_error("No active scope to add variable: " + name);
         }
@@ -108,5 +110,6 @@ public:
     void finishMainFunction();
     void cleanUpDeadBlocks();
     void lowerToLLVM();
+    void raiseToSCF();
     std::unique_ptr<llvm::Module> convertToLLVMIR();
 };

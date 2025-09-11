@@ -39,7 +39,7 @@ void AstLowering::lowerToLLVM() {
     mlir::PassManager pm(context);
 
     // (2) Add conversion passes
-    // pm.addPass(mlir::createConvertSCFToCFPass());
+    pm.addPass(mlir::createConvertSCFToCFPass());
     pm.addPass(mlir::createArithToLLVMConversionPass());
     pm.addPass(mlir::createConvertControlFlowToLLVMPass());
     pm.addPass(mlir::createFinalizeMemRefToLLVMConversionPass());
@@ -52,6 +52,20 @@ void AstLowering::lowerToLLVM() {
     }
 
     std::cout << "Successfully lowered to LLVM Dialect" << std::endl;
+}
+
+void AstLowering::raiseToSCF() {
+    // (1) Create a pass manager
+    mlir::PassManager pm(context);
+
+    // (2) Add conversion pass
+    pm.addPass(mlir::createLiftControlFlowToSCFPass());
+
+    // (3) Run the pass
+    if (mlir::failed(pm.run(module))) {
+        std::cerr << "Failed to lower to LLVM" << std::endl;
+        return;
+    }
 }
 
 std::unique_ptr<llvm::Module> AstLowering::convertToLLVMIR() {
@@ -118,15 +132,17 @@ std::any AstLowering::visitFunctionStmt(Function& stmt) {
 
     // (8) Add parameters to the symbol table and create store ops.
     for (size_t i = 0; i < stmt.params.size(); ++i) {
-        auto paramAlloca = builder.create<mlir::memref::AllocaOp>(
-            loc, mlir::MemRefType::get({}, builder.getF64Type())
-        );
+        // auto paramAlloca = builder.create<mlir::memref::AllocaOp>(
+        //     loc, mlir::MemRefType::get({}, builder.getF64Type())
+        // );
 
-        builder.create<mlir::memref::StoreOp>(
-            loc, entryBlock.getArgument(i), paramAlloca
-        );
+        // builder.create<mlir::memref::StoreOp>(
+        //     loc, entryBlock.getArgument(i), paramAlloca
+        // );
 
-        addVariable(stmt.params[i].getLexeme(), paramAlloca);
+        // addVariable(stmt.params[i].getLexeme(), paramAlloca);
+
+        addVariable(stmt.params[i].getLexeme(), entryBlock.getArgument(i));
     }
 
     // (9) Generate function body
@@ -367,9 +383,9 @@ std::any AstLowering::visitReturnStmt(Return& stmt) {
 
 std::any AstLowering::visitVarStmt(Var& stmt) {
     // (1) Allocate mutable memory on stack as opposed to on heap
-    auto allocaOp = builder.create<mlir::memref::AllocaOp>(
-        loc, mlir::MemRefType::get({}, builder.getF64Type())
-    );
+    // auto allocaOp = builder.create<mlir::memref::AllocaOp>(
+    //     loc, mlir::MemRefType::get({}, builder.getF64Type())
+    // );
 
     // (2) Initialize the memory
     mlir::Value initValue;
@@ -385,13 +401,14 @@ std::any AstLowering::visitVarStmt(Var& stmt) {
     }
 
     // (3) Store initial value
-    builder.create<mlir::memref::StoreOp>(loc, initValue, allocaOp);
+    // builder.create<mlir::memref::StoreOp>(loc, initValue, allocaOp);
 
     // (4) Store the memory reference in symbol table
-    addVariable(stmt.name.getLexeme(), allocaOp);
+    // addVariable(stmt.name.getLexeme(), allocaOp);
+    addVariable(stmt.name.getLexeme(), initValue);
 
     // std::cout << "MLIR: Added variable declaration '" << stmt.name.getLexeme() << "' to MLIR" << std::endl;
-    return allocaOp;
+    return initValue;
 }
 
 std::any AstLowering::visitBinaryExpr(Binary& expr) {
@@ -534,9 +551,9 @@ std::any AstLowering::visitVariableExpr(Variable& expr) {
     auto it = lookupVariable(expr.name.getLexeme());
     
     // (2) Create a load op to get the variable.
-    mlir::Value result = builder.create<mlir::memref::LoadOp>(loc, it);
+    // mlir::Value result = builder.create<mlir::memref::LoadOp>(loc, it);
     // std::cout << "MLIR: Added variable access '" << expr.name.getLexeme() << "' to MLIR" << std::endl;
-    return result;
+    return it;
 }
 
 std::any AstLowering::visitAssignExpr(Assign& expr) {
@@ -544,12 +561,14 @@ std::any AstLowering::visitAssignExpr(Assign& expr) {
     auto valueResult = expr.value->accept(*this);
     mlir::Value value = std::any_cast<mlir::Value>(valueResult);
 
-
     // (2) Find the variable in symbol table.
     auto it = lookupVariable(expr.name.getLexeme());
 
+    // Replace the variable in symbol table.
+    addVariable(expr.name.getLexeme(), value);
+
     // (3) Create a store op to assign a new value to it.
-    builder.create<mlir::memref::StoreOp>(loc, value, it);
+    // builder.create<mlir::memref::StoreOp>(loc, value, it);
     // std::cout << "MLIR: Added assignment to variable '" << expr.name.getLexeme() << "' to MLIR" << std::endl;
     return value;
 }

@@ -71,6 +71,16 @@ void Loxtite::run(const std::string& source) {
     lowerer.getModule().print(mlirFile);
     mlirFile.close();
 
+    lowerer.raiseToSCF();
+
+    llvm::raw_fd_ostream mlirFile2("out2.mlir", ec, llvm::sys::fs::OF_None);
+    if (ec) {
+        std::cerr << "Error opening out2.mlir" << std::endl;
+        return;
+    }
+    lowerer.getModule().print(mlirFile2);
+    mlirFile2.close();
+
     std::cerr << "Successfully output MLIR." << std::endl;
 
     lowerer.lowerToLLVM();

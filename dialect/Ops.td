@@ -40,10 +40,20 @@ def ConstantOp : M_Loop_Op<"constant", [ConstantLike, Pure]> {
         ```
     }];
 
+    // An attribute is a constant value. $value gives it a name.
     let arguments = (ins F64Attr:$value);
+
+    // F64 is a type. 
     let results = (outs F64:$result);
 
     let builders = [
+        // We need only a double constant value as an argument.
         OpBuilder<(ins "double":$value)>
     ];
 }
+
+//===----------------------------------------------------------------------===//
+// WhileOp
+//===----------------------------------------------------------------------===//
+
+def WhileOp : M_Loop_Op<"while"> {}

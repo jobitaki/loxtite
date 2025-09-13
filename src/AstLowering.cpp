@@ -24,13 +24,15 @@ void AstLowering::finishMainFunction() {
     popScope();
 }
 
-void AstLowering::cleanUpDeadBlocks() {
+void AstLowering::optimizeMLIR() {
     // Run canonicalizer to remove dead code
     mlir::PassManager pm(context);
     pm.addPass(mlir::createCanonicalizerPass());
+    pm.addPass(mlir::createMem2Reg());
+    pm.addPass(mlir::createLiftControlFlowToSCFPass());
     
     if (mlir::failed(pm.run(module))) {
-        std::cerr << "Failed to cleanup dead blocks" << std::endl;
+        std::cerr << "Failed to optimize MLIR" << std::endl;
     }
 }
 
@@ -39,7 +41,7 @@ void AstLowering::lowerToLLVM() {
     mlir::PassManager pm(context);
 
     // (2) Add conversion passes
-    pm.addPass(mlir::createConvertSCFToCFPass());
+    // pm.addPass(mlir::createConvertSCFToCFPass());
     pm.addPass(mlir::createArithToLLVMConversionPass());
     pm.addPass(mlir::createConvertControlFlowToLLVMPass());
     pm.addPass(mlir::createFinalizeMemRefToLLVMConversionPass());
@@ -52,20 +54,6 @@ void AstLowering::lowerToLLVM() {
     }
 
     std::cout << "Successfully lowered to LLVM Dialect" << std::endl;
-}
-
-void AstLowering::raiseToSCF() {
-    // (1) Create a pass manager
-    mlir::PassManager pm(context);
-
-    // (2) Add conversion pass
-    pm.addPass(mlir::createLiftControlFlowToSCFPass());
-
-    // (3) Run the pass
-    if (mlir::failed(pm.run(module))) {
-        std::cerr << "Failed to lower to LLVM" << std::endl;
-        return;
-    }
 }
 
 std::unique_ptr<llvm::Module> AstLowering::convertToLLVMIR() {
@@ -132,17 +120,15 @@ std::any AstLowering::visitFunctionStmt(Function& stmt) {
 
     // (8) Add parameters to the symbol table and create store ops.
     for (size_t i = 0; i < stmt.params.size(); ++i) {
-        // auto paramAlloca = builder.create<mlir::memref::AllocaOp>(
-        //     loc, mlir::MemRefType::get({}, builder.getF64Type())
-        // );
+        auto paramAlloca = builder.create<mlir::memref::AllocaOp>(
+            loc, mlir::MemRefType::get({}, builder.getF64Type())
+        );
 
-        // builder.create<mlir::memref::StoreOp>(
-        //     loc, entryBlock.getArgument(i), paramAlloca
-        // );
+        builder.create<mlir::memref::StoreOp>(
+            loc, entryBlock.getArgument(i), paramAlloca
+        );
 
-        // addVariable(stmt.params[i].getLexeme(), paramAlloca);
-
-        addVariable(stmt.params[i].getLexeme(), entryBlock.getArgument(i));
+        addVariable(stmt.params[i].getLexeme(), paramAlloca);
     }
 
     // (9) Generate function body
@@ -155,6 +141,7 @@ std::any AstLowering::visitFunctionStmt(Function& stmt) {
     if (!currentBlock->hasNoPredecessors()) {
         if (currentBlock->empty() || 
             !currentBlock->back().hasTrait<mlir::OpTrait::IsTerminator>()) {
+            std::cerr << "hello" << std::endl;
             mlir::Value defaultReturn = builder.create<mlir::arith::ConstantFloatOp>(
                 loc, llvm::APFloat(0.0), builder.getF64Type()
             );
@@ -383,9 +370,9 @@ std::any AstLowering::visitReturnStmt(Return& stmt) {
 
 std::any AstLowering::visitVarStmt(Var& stmt) {
     // (1) Allocate mutable memory on stack as opposed to on heap
-    // auto allocaOp = builder.create<mlir::memref::AllocaOp>(
-    //     loc, mlir::MemRefType::get({}, builder.getF64Type())
-    // );
+    auto allocaOp = builder.create<mlir::memref::AllocaOp>(
+        loc, mlir::MemRefType::get({}, builder.getF64Type())
+    );
 
     // (2) Initialize the memory
     mlir::Value initValue;
@@ -401,11 +388,10 @@ std::any AstLowering::visitVarStmt(Var& stmt) {
     }
 
     // (3) Store initial value
-    // builder.create<mlir::memref::StoreOp>(loc, initValue, allocaOp);
+    builder.create<mlir::memref::StoreOp>(loc, initValue, allocaOp);
 
     // (4) Store the memory reference in symbol table
-    // addVariable(stmt.name.getLexeme(), allocaOp);
-    addVariable(stmt.name.getLexeme(), initValue);
+    addVariable(stmt.name.getLexeme(), allocaOp);
 
     // std::cout << "MLIR: Added variable declaration '" << stmt.name.getLexeme() << "' to MLIR" << std::endl;
     return initValue;
@@ -551,9 +537,9 @@ std::any AstLowering::visitVariableExpr(Variable& expr) {
     auto it = lookupVariable(expr.name.getLexeme());
     
     // (2) Create a load op to get the variable.
-    // mlir::Value result = builder.create<mlir::memref::LoadOp>(loc, it);
+    mlir::Value result = builder.create<mlir::memref::LoadOp>(loc, it);
     // std::cout << "MLIR: Added variable access '" << expr.name.getLexeme() << "' to MLIR" << std::endl;
-    return it;
+    return result;
 }
 
 std::any AstLowering::visitAssignExpr(Assign& expr) {
@@ -564,11 +550,8 @@ std::any AstLowering::visitAssignExpr(Assign& expr) {
     // (2) Find the variable in symbol table.
     auto it = lookupVariable(expr.name.getLexeme());
 
-    // Replace the variable in symbol table.
-    addVariable(expr.name.getLexeme(), value);
-
     // (3) Create a store op to assign a new value to it.
-    // builder.create<mlir::memref::StoreOp>(loc, value, it);
+    builder.create<mlir::memref::StoreOp>(loc, value, it);
     // std::cout << "MLIR: Added assignment to variable '" << expr.name.getLexeme() << "' to MLIR" << std::endl;
     return value;
 }

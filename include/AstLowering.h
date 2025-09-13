@@ -54,21 +54,20 @@ private:
     mlir::Location loc;
     llvm::LLVMContext llvmContext;
 
-    // std::vector<std::unordered_map<std::string, mlir::Value>> symbolTableStack;
-    std::vector<std::unordered_map<std::string, mlir::Value>> ssaVarStack;
+    std::vector<std::unordered_map<std::string, mlir::Value>> symbolTableStack;
 
     void pushScope() {
-        ssaVarStack.emplace_back();
+        symbolTableStack.emplace_back();
     }
 
     void popScope() {
-        if (!ssaVarStack.empty()) {
-            ssaVarStack.pop_back();
+        if (!symbolTableStack.empty()) {
+            symbolTableStack.pop_back();
         }
     }
 
     mlir::Value lookupVariable(const std::string& name) {
-        for (auto it = ssaVarStack.rbegin(); it != ssaVarStack.rend(); ++it) {
+        for (auto it = symbolTableStack.rbegin(); it != symbolTableStack.rend(); ++it) {
             auto found = it->find(name);
             if (found != it->end()) {
                 return found->second;
@@ -78,8 +77,8 @@ private:
     }
 
     void addVariable(const std::string& name, mlir::Value value) {
-        if (!ssaVarStack.empty()) {
-            ssaVarStack.back()[name] = value;
+        if (!symbolTableStack.empty()) {
+            symbolTableStack.back()[name] = value;
         } else {
             throw std::runtime_error("No active scope to add variable: " + name);
         }
@@ -108,8 +107,7 @@ public:
     mlir::ModuleOp getModule() { return module; }
     void createMainFunction();
     void finishMainFunction();
-    void cleanUpDeadBlocks();
+    void optimizeMLIR();
     void lowerToLLVM();
-    void raiseToSCF();
     std::unique_ptr<llvm::Module> convertToLLVMIR();
 };

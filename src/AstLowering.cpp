@@ -25,8 +25,8 @@ void AstLowering::finishMainFunction() {
 }
 
 void AstLowering::optimizeMLIR() {
-    // Run canonicalizer to remove dead code
     mlir::PassManager pm(context);
+    // pm.addPass(mlir::createRemoveDeadValuesPass());
     pm.addPass(mlir::createCanonicalizerPass());
     pm.addPass(mlir::createMem2Reg());
     pm.addPass(mlir::createLiftControlFlowToSCFPass());
@@ -41,7 +41,7 @@ void AstLowering::lowerToLLVM() {
     mlir::PassManager pm(context);
 
     // (2) Add conversion passes
-    // pm.addPass(mlir::createConvertSCFToCFPass());
+    pm.addPass(mlir::createConvertSCFToCFPass());
     pm.addPass(mlir::createArithToLLVMConversionPass());
     pm.addPass(mlir::createConvertControlFlowToLLVMPass());
     pm.addPass(mlir::createFinalizeMemRefToLLVMConversionPass());
@@ -141,7 +141,7 @@ std::any AstLowering::visitFunctionStmt(Function& stmt) {
     if (!currentBlock->hasNoPredecessors()) {
         if (currentBlock->empty() || 
             !currentBlock->back().hasTrait<mlir::OpTrait::IsTerminator>()) {
-            std::cerr << "hello" << std::endl;
+            std::cout << "Adding default return" << std::endl;
             mlir::Value defaultReturn = builder.create<mlir::arith::ConstantFloatOp>(
                 loc, llvm::APFloat(0.0), builder.getF64Type()
             );
@@ -184,11 +184,13 @@ std::any AstLowering::visitIfStmt(If& stmt) {
     // (3) Create the if operation
     auto* currentBlock = builder.getInsertionBlock();
     auto* thenBlock = builder.createBlock(currentBlock->getParent());
-    auto* elseBlock = stmt.elseBranch ? builder.createBlock(currentBlock->getParent()) : nullptr;
+    auto* elseBlock = stmt.elseBranch ? 
+        builder.createBlock(currentBlock->getParent()) : nullptr;
     auto* mergeBlock = builder.createBlock(currentBlock->getParent());
 
     builder.setInsertionPointToEnd(currentBlock);
 
+    // Create a branch op for jumping to if body
     if (stmt.elseBranch) {
         builder.create<mlir::cf::CondBranchOp>(
             loc, boolCondition, thenBlock, elseBlock);
@@ -200,8 +202,14 @@ std::any AstLowering::visitIfStmt(If& stmt) {
     // (4) Create the then branch
     builder.setInsertionPointToStart(thenBlock);
     stmt.thenBranch->accept(*this);
+    // Create branch to merge block regardless of if there is already a terminator or not
+    std::cout << "BEFORE::" << std::endl << std::endl;
+    module.dump();
+    std::cout << std::endl;
     if (!thenBlock->back().hasTrait<mlir::OpTrait::IsTerminator>()) {
-        // Create branch to merge block, only if the then block has no term.
+        std::cout << "AFTER::" << std::endl << std::endl;
+        module.dump();
+        std::cout << std::endl;
         builder.create<mlir::cf::BranchOp>(loc, mergeBlock);
     }
 
@@ -217,6 +225,7 @@ std::any AstLowering::visitIfStmt(If& stmt) {
 
     // (8) Set the insertion point after the if operation
     builder.setInsertionPointToStart(mergeBlock);
+    
 
     // std::cout << "MLIR: Added if statement to MLIR" << std::endl;
     return nullptr;

@@ -59,8 +59,12 @@ void Loxtite::run(const std::string& source) {
     }
 
     lowerer.finishMainFunction();
+    
+    std::cerr << "Successfully generated MLIR." << std::endl;
 
     lowerer.optimizeMLIR();
+    
+    std::cerr << "Successfully ran MLIR passes." << std::endl;
     
     std::error_code ec;
     llvm::raw_fd_ostream mlirFile("out.mlir", ec, llvm::sys::fs::OF_None);

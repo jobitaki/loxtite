@@ -13,6 +13,7 @@ AstLowering::AstLowering(mlir::MLIRContext* ctx)
 void AstLowering::createMainFunction() {
     auto funcType = builder.getFunctionType({}, {});
     auto mainFunc = builder.create<mlir::func::FuncOp>(loc, "main", funcType);
+    mainFunc->setAttr("sym_visibility", builder.getStringAttr("private"));
     auto& entryBlock = *mainFunc.addEntryBlock();
     builder.setInsertionPointToStart(&entryBlock);
     // For main function scope
@@ -28,6 +29,7 @@ void AstLowering::optimizeMLIR() {
     mlir::PassManager pm(context);
     // pm.addPass(mlir::createRemoveDeadValuesPass());
     pm.addPass(mlir::createCanonicalizerPass());
+    // pm.addPass(mlir::createSymbolDCEPass()); Removes main function
     pm.addPass(mlir::createMem2Reg());
     pm.addPass(mlir::createLiftControlFlowToSCFPass());
     
@@ -141,7 +143,6 @@ std::any AstLowering::visitFunctionStmt(Function& stmt) {
     if (!currentBlock->hasNoPredecessors()) {
         if (currentBlock->empty() || 
             !currentBlock->back().hasTrait<mlir::OpTrait::IsTerminator>()) {
-            std::cout << "Adding default return" << std::endl;
             mlir::Value defaultReturn = builder.create<mlir::arith::ConstantFloatOp>(
                 loc, llvm::APFloat(0.0), builder.getF64Type()
             );
@@ -157,8 +158,7 @@ std::any AstLowering::visitFunctionStmt(Function& stmt) {
     // (12) Restore insertion point
     builder.restoreInsertionPoint(savedIP);
 
-    std::cout << "MLIR: Added function statement to MLIR" << std::endl;
-    module.dump();
+    // std::cout << "MLIR: Added function statement to MLIR" << std::endl;
     return nullptr;
 }
 
@@ -204,38 +204,23 @@ std::any AstLowering::visitIfStmt(If& stmt) {
     builder.setInsertionPointToStart(thenBlock);
     stmt.thenBranch->accept(*this);
     // Create branch to merge block regardless of if there is already a terminator or not
-    std::cout << "BEFORE THEN" << std::endl << std::endl;
     if (!thenBlock->back().hasTrait<mlir::OpTrait::IsTerminator>()) {
-        auto op = builder.create<mlir::cf::BranchOp>(loc, mergeBlock);
-        std::cout << "Then br dump" << std::endl;
-        op.dump();
-        std::cout << "AFTER THEN" << std::endl << std::endl;
+        builder.create<mlir::cf::BranchOp>(loc, mergeBlock);
     }
-    std::cout << "Then branch" << std::endl;
-    thenBlock->dump();
 
     // (7) If there is an else branch, create it
     if (stmt.elseBranch) {
         builder.setInsertionPointToStart(elseBlock);
         stmt.elseBranch->accept(*this);
-        std::cout << (builder.getInsertionBlock()->empty() ? "YES" : "NO") << std::endl;
         if (!elseBlock->back().hasTrait<mlir::OpTrait::IsTerminator>()
             || builder.getInsertionBlock()->empty()) {
             // Create branch to merge block, only if the else block has no term.
-            auto op = builder.create<mlir::cf::BranchOp>(loc, mergeBlock);
-            std::cout << "Else br dump" << std::endl;
-            op.dump();
+            builder.create<mlir::cf::BranchOp>(loc, mergeBlock);
         }
-        std::cout << "Else branch" << std::endl;
-        elseBlock->dump();
     }
 
     // (8) Set the insertion point after the if operation
     builder.setInsertionPointToStart(mergeBlock);
-
-    std::cout << "Merge block" << std::endl;
-    mergeBlock->dump();
-    
 
     // std::cout << "MLIR: Added if statement to MLIR" << std::endl;
     return nullptr;

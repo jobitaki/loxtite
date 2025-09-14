@@ -157,7 +157,8 @@ std::any AstLowering::visitFunctionStmt(Function& stmt) {
     // (12) Restore insertion point
     builder.restoreInsertionPoint(savedIP);
 
-    // std::cout << "MLIR: Added function statement to MLIR" << std::endl;
+    std::cout << "MLIR: Added function statement to MLIR" << std::endl;
+    module.dump();
     return nullptr;
 }
 
@@ -203,28 +204,37 @@ std::any AstLowering::visitIfStmt(If& stmt) {
     builder.setInsertionPointToStart(thenBlock);
     stmt.thenBranch->accept(*this);
     // Create branch to merge block regardless of if there is already a terminator or not
-    std::cout << "BEFORE::" << std::endl << std::endl;
-    module.dump();
-    std::cout << std::endl;
+    std::cout << "BEFORE THEN" << std::endl << std::endl;
     if (!thenBlock->back().hasTrait<mlir::OpTrait::IsTerminator>()) {
-        std::cout << "AFTER::" << std::endl << std::endl;
-        module.dump();
-        std::cout << std::endl;
-        builder.create<mlir::cf::BranchOp>(loc, mergeBlock);
+        auto op = builder.create<mlir::cf::BranchOp>(loc, mergeBlock);
+        std::cout << "Then br dump" << std::endl;
+        op.dump();
+        std::cout << "AFTER THEN" << std::endl << std::endl;
     }
+    std::cout << "Then branch" << std::endl;
+    thenBlock->dump();
 
     // (7) If there is an else branch, create it
     if (stmt.elseBranch) {
         builder.setInsertionPointToStart(elseBlock);
         stmt.elseBranch->accept(*this);
-        if (!elseBlock->back().hasTrait<mlir::OpTrait::IsTerminator>()) {
+        std::cout << (builder.getInsertionBlock()->empty() ? "YES" : "NO") << std::endl;
+        if (!elseBlock->back().hasTrait<mlir::OpTrait::IsTerminator>()
+            || builder.getInsertionBlock()->empty()) {
             // Create branch to merge block, only if the else block has no term.
-            builder.create<mlir::cf::BranchOp>(loc, mergeBlock);
+            auto op = builder.create<mlir::cf::BranchOp>(loc, mergeBlock);
+            std::cout << "Else br dump" << std::endl;
+            op.dump();
         }
+        std::cout << "Else branch" << std::endl;
+        elseBlock->dump();
     }
 
     // (8) Set the insertion point after the if operation
     builder.setInsertionPointToStart(mergeBlock);
+
+    std::cout << "Merge block" << std::endl;
+    mergeBlock->dump();
     
 
     // std::cout << "MLIR: Added if statement to MLIR" << std::endl;

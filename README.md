@@ -8,19 +8,41 @@ This is my attempt at learning how to build a compiler frontend and use MLIR/LLV
 ## How to run
 Make sure you have LLVM and MLIR installed. 
 
-To build, run:
+To build, run (Your DLLVM_DIR and DMLIR_DIR will be different dependeding on where you installed them):
 ```
 cd build
 cmake .. -DLLVM_DIR=/opt/homebrew/lib/cmake/llvm -DMLIR_DIR=/opt/homebrew/lib/cmake/mlir
 ```
 Then, to make and run the executable, simply run:
 ```
-make -j$(sysctl -n hw.ncpu)
+cmake --build .
 ./loxtite path_to_script
 ```
 This will create two files, out.mlir and out.ll. Respectively, they contain the unoptimized MLIR code, and the MLIR code lowered to LLVM IR. To run your code with the LLVM interpreter, run:
 ```
 lli out.ll
+```
+To try running your programs externally in C like so:
+```
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+
+extern double my_external_func(double a, double b);
+
+int main() {
+ // Insert unit test that calls my_external_func!
+}
+```
+Compile your main.c file with your program's LLVM output like so:
+```
+clang -c main.c -o main.o
+clang -c your_output.ll -o your_output.o
+clang main.o your_output.o -o final_output
+```
+Then run
+```
+./final_output
 ```
 
 ## Directory Structure

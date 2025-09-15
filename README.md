@@ -47,6 +47,7 @@ Then run
 
 ## Directory Structure
 ```
+dialect - Custom MLIR dialect code
 examples - Example loxtite code
 include - Header files
 scripts - Scripts to generate header files
@@ -70,17 +71,15 @@ x = 10.0;
 // Control flow
 if (x) {
     ... 
-    /* No returns inside of body */
+} else if { 
     ...
-} else { 
-    ...
-    /* No else ifs supported for now */
+} else {
     ...
 }
 
 while (...) {
     ...
-    /* No returns inside of body */
+    /* No returns inside of loop body yet */
     ...
 }
 

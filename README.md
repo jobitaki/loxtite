@@ -1,7 +1,5 @@
-<div style="display: flex; align-items: center;">
-  <img src="loxtite_short.png" alt="loxtite logo" width="100" />
-  <h1 style="margin-left: 16px;">Loxtite Compiler</h1>
-</div>
+# ![logo][] Loxtite Compiler
+[logo]: loxtite_short.svg?sanitize=true
 
 Loxtite is a WIP programming language and compiler adapted from Robert Nystrom's Lox from his book, _Crafting Interpreters_. Instead of writing the entire compiler stack from scratch, the backend is composed of MLIR and LLVM. 
 

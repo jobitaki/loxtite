@@ -7,7 +7,7 @@ This is my attempt at learning how to build a compiler frontend and use MLIR/LLV
 ## How to run
 Make sure you have LLVM and MLIR installed. 
 
-To build, run (Your DLLVM_DIR and DMLIR_DIR will be different dependeding on where you installed them):
+To build, run (Your DLLVM_DIR and DMLIR_DIR will be different depending on where you installed them):
 ```
 cd build
 cmake .. -DLLVM_DIR=/opt/homebrew/lib/cmake/llvm -DMLIR_DIR=/opt/homebrew/lib/cmake/mlir
@@ -17,7 +17,7 @@ Then, to make and run the executable, simply run:
 cmake --build .
 ./loxtite path_to_script
 ```
-This will create two files, out.mlir and out.ll. Respectively, they contain the unoptimized MLIR code, and the MLIR code lowered to LLVM IR. To run your code with the LLVM interpreter, run:
+This will create two files, out.mlir and out.ll. Respectively, they contain the optimized MLIR code, and the MLIR code lowered to LLVM IR. To run your code with the LLVM interpreter, run:
 ```
 lli out.ll
 ```
